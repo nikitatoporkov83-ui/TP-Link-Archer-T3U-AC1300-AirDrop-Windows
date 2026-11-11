@@ -11,4 +11,10 @@ git config --local --fixed-value --replace-all remote.origin.fetch \
 git fetch origin
 git show-ref --verify --quiet refs/remotes/origin/main
 git remote set-head origin main
+
+python3 -c 'import sys; assert sys.version_info >= (3, 11), "Python 3.11+ is required"'
+pulseit_venv="${PULSEIT_VENV:-/workspace/.venvs/pulseit}"
+python3 -m venv "$pulseit_venv"
+"$pulseit_venv/bin/python" -m pip install --disable-pip-version-check --no-cache-dir \
+    -r installer/requirements.txt
 git status --short --branch

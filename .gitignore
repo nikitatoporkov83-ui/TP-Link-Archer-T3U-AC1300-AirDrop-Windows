@@ -1,20 +1,37 @@
-# Local secrets
+build/
+tools/bleprobe/bin/
+tools/bleprobe/obj/
+
+__pycache__/
+*.pyc
+
+desktop/bin/
+desktop/obj/
+dist/
+
+# Runtime identities, credentials, captures and local environment files.
 .env
 .env.*
 !.env.example
-
-# IDE user state
+*.pem
+*.key
+*.pfx
+*.p12
+*.pcap
+*.pcapng
+*.etl
+*.log
+logs/
+received/
+.venv/
 .vs/
+
+# Local repository defaults retained from initialization.
 .idea/
 *.user
 *.suo
-
-# OS metadata
 .DS_Store
 Thumbs.db
 Desktop.ini
-
-# Temporary files and local build output
-*.log
 *.tmp
 /artifacts/

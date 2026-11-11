@@ -1,9 +1,9 @@
-# Security reporting
+# Сообщение об уязвимости
 
-This experimental software handles untrusted nearby devices, files, network traffic and administrator-level setup. It has no independent security audit or support SLA.
+Это экспериментальная программа, работающая с неизвестными соседними устройствами, файлами, сетевым трафиком и настройкой с правами администратора. Независимый аудит безопасности и гарантированный срок поддержки отсутствуют.
 
-Do not post secrets, keys, raw diagnostic ZIPs, captures, received files or personal device details in public issues. Use GitHub **Security → Advisories → Report a vulnerability** if private reporting is enabled. If unavailable, open an issue requesting a private channel without exploit details or sensitive attachments. No public security email is configured.
+Не публикуйте секреты, ключи, необработанные диагностические ZIP-архивы, записи трафика, принятые файлы и личные сведения об устройствах. Используйте GitHub **Security → Advisories → Report a vulnerability**, если приватные сообщения включены. Иначе создайте обращение с просьбой о закрытом канале без описания эксплуатации и чувствительных вложений. Публичный адрес электронной почты для уязвимостей не настроен.
 
-Include revision, component, impact and a minimal reproduction with synthetic data. Redact identifiers and paths. Test only devices/networks you own or have permission to assess.
+Укажите коммит, компонент, последствия и минимальный пример с искусственными данными. Удалите идентификаторы и личные пути. Проверяйте только свои устройства и сети либо те, на проверку которых есть разрешение.
 
-Before distributing binaries, review dependencies, source/notices, driver restoration and signing. Discovery and successful helper exits do not prove peer identity or completed transfers.
+Перед распространением сборок проверяйте зависимости, исходники, уведомления, восстановление драйвера и подписи. Найденное устройство и успешный выход вспомогательного процесса не подтверждают личность получателя или завершение передачи.

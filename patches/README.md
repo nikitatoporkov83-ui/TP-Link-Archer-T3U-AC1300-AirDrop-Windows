@@ -1,24 +1,18 @@
-# Upstream patch series
+# Исправления исходных компонентов
 
-CMake applies the pinned omdrop-owl series, then sorted `win-*.patch` files.
+CMake применяет закреплённую серию omdrop-owl, затем отсортированные `win-*.patch`.
 
-- win-01: trim received data before Ethernet conversion.
-- win-02: initialize receive flags.
-- win-03: peer liveness support.
-- win-04: receive output capacity bounds.
-- win-05: narrowly allow final zero action padding.
-- win-06: reject oversized Ethernet output payloads.
+- win-01: обрезка принятых данных перед преобразованием в Ethernet.
+- win-02: инициализация флагов приёма.
+- win-03: отслеживание активности соседей.
+- win-04: проверка вместимости выходного буфера приёма.
+- win-05: разрешение только завершающих нулевых байтов выравнивания кадров действий.
+- win-06: отказ от слишком большого выходного содержимого Ethernet.
 
-OWL-derived patches retain GPL-3.0-or-later licensing. The separate
-`devourer-0*.patch` files are GPL-2.0-only and are applied in order by
-`tools/build-devourer.sh`. See the root license map and architecture guide.
+Исправления OWL сохраняют GPL-3.0-or-later. Отдельные `devourer-0*.patch` имеют GPL-2.0-only и последовательно применяются `tools/build-devourer.sh`. См. карту лицензий и архитектуру.
 
-- devourer-01: MinGW build fork of the txdemo example.
-- devourer-02: Jaguar2 (8812BU/8822B) 40/80 MHz. The baseband and
-  REG_CCKSB took devourer's slice position index where they expect the
-  vendor sub-channel code, so the 80 MHz primary for channel 149 sat on
-  157; the MAC half of the width (REG_DATA_SC, REG_WMAC_TRXPTCL_CTL RFMOD),
-  which hardware ACK/BlockAck responses use, was never programmed.
-- devourer-03: Jaguar2 receive digital filter values per width (the
-  20 MHz values were always used), following the vendor
-  `phydm_rxdfirpar_by_bw_8822b`.
+- devourer-01: сборка примера txdemo через MinGW.
+- devourer-02: полоса 40/80 МГц Jaguar2 (8812BU/8822B). Вместо ожидаемого кода подканала в baseband и REG_CCKSB попадал индекс среза devourer: основной канал 149 в полосе 80 МГц оказывался на 157. Часть настройки MAC (REG_DATA_SC, REG_WMAC_TRXPTCL_CTL RFMOD), используемая аппаратными ACK/BlockAck, не программировалась.
+- devourer-03: значения цифрового фильтра приёма Jaguar2 для каждой ширины по `phydm_rxdfirpar_by_bw_8822b`; ранее всегда использовались значения 20 МГц.
+
+Сами файлы исправлений сохранены в исходном виде, чтобы не менять применимость и авторские уведомления.

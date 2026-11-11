@@ -1,5 +1,6 @@
 """Repeat a standards-shaped AirDrop mDNS answer from the exact AWDL source IP."""
 import argparse
+from ru_cli import ArgumentParser
 import ipaddress
 import socket
 import struct
@@ -9,7 +10,7 @@ import time
 def dns_name(name):
     labels = name.rstrip('.').split('.')
     if any(not label or len(label.encode()) > 63 for label in labels):
-        raise ValueError('invalid DNS name')
+        raise ValueError('недопустимое имя DNS')
     return b''.join(bytes([len(label.encode())]) + label.encode() for label in labels) + b'\x00'
 
 
@@ -40,11 +41,11 @@ def announce(address, ifindex, sid, seconds):
             sock.sendto(message, ('ff02::fb', 5353, 0, ifindex))
             count += 1
             time.sleep(.25)
-        print(f'mDNS UDP submissions={count}; on-air delivery requires peer response')
+        print(f'Отправлено mDNS UDP-пакетов: {count}; для подтверждения доставки по радио нужен ответ устройства')
 
 
 if __name__ == '__main__':
-    p = argparse.ArgumentParser()
+    p = ArgumentParser()
     p.add_argument('--address', required=True)
     p.add_argument('--ifindex', type=int, required=True)
     p.add_argument('--sid', required=True)

@@ -11,13 +11,13 @@
 ```bash
 cd /workspace/TP-Link-Archer-T3U-AC1300-AirDrop-Windows
 bash scripts/setup-cloud.sh
-/workspace/.venvs/pulseit/bin/python -m unittest discover -s tests -p 'test_*.py'
+/workspace/.venvs/pulsar/bin/python -m unittest discover -s tests -p 'test_*.py'
 ```
 
 Скрипт настраивает получение веток Git, проверяет `origin/main` и устанавливает
-закреплённые Python-зависимости в `/workspace/.venvs/pulseit`. Повторный запуск
+закреплённые Python-зависимости в `/workspace/.venvs/pulsar`. Повторный запуск
 допустим. Рабочая ветка и файлы проекта не переключаются и не сбрасываются.
-Для другого расположения виртуального окружения задайте `PULSEIT_VENV`.
+Для другого расположения виртуального окружения задайте `PULSAR_VENV`.
 
 Используйте встроенный HTTPS-доступ к GitHub. Отсутствие `GITHUB_TOKEN`
 само по себе не означает, что доступ не настроен.
@@ -43,8 +43,11 @@ Python-тесты доступны в Linux. Windows PowerShell-проверки
 пропущенными самим тестовым набором. Постоянно работающий сервис для этих
 тестов не нужен: они поднимают и останавливают локальные тестовые серверы.
 
-Приложение WinForms, нативные компоненты, установка драйверов и обмен с iPhone
-требуют Windows и соответствующего оборудования. Не запускайте в облачной
+Запуск WinForms, нативных компонентов, установка драйверов и обмен с iPhone
+требуют Windows и соответствующего оборудования. Компиляцию Windows-проектов
+можно проверить в Linux с .NET SDK 8 и EnableWindowsTargeting=true.
+Проверки локализации без оборудования: dotnet run --project
+tests/localization/LocalizationChecks.csproj -c Release. Не запускайте в облачной
 Linux-среде скрипты установки устройств и не считайте пропуски Windows-тестов
 подтверждением аппаратной совместимости. См. [сборку на Windows](build.md)
 и [ограничения исходного проекта](limitations.md).

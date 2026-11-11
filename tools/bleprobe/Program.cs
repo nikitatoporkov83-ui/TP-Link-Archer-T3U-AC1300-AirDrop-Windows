@@ -13,16 +13,17 @@ using Windows.Devices.Bluetooth.Advertisement;
 
 const ushort Apple = 0x004C;
 
+Console.OutputEncoding = System.Text.Encoding.UTF8;
 var mode = args.Length > 0 ? args[0] : "";
 var seconds = args.Length > 1 ? int.Parse(args[1]) : 10;
 if (mode != "publish" && mode != "publish-airdrop" && mode != "scan" && mode != "radio-on" && mode != "radio-cycle") {
-    Console.WriteLine("usage: bleprobe publish|publish-airdrop|scan [seconds], or radio-on|radio-cycle");
+    Console.WriteLine("Использование: bleprobe publish|publish-airdrop|scan [секунды] либо radio-on|radio-cycle");
     return 2;
 }
 
 var adapter = await BluetoothAdapter.GetDefaultAsync();
 if (adapter is null) {
-    Console.WriteLine("NO BLUETOOTH ADAPTER");
+    Console.WriteLine("АДАПТЕР BLUETOOTH НЕ НАЙДЕН");
     return 4;
 }
 var physicalRadio = await adapter.GetRadioAsync();
@@ -30,7 +31,7 @@ Console.WriteLine($"radio state={physicalRadio?.State}");
 if (mode == "radio-on" || mode == "radio-cycle") {
     var access = await Windows.Devices.Radios.Radio.RequestAccessAsync();
     if (physicalRadio is null || access != Windows.Devices.Radios.RadioAccessStatus.Allowed) {
-        Console.WriteLine($"radio access={access}; enable Bluetooth in Windows Settings");
+        Console.WriteLine($"radio access={access}; включите Bluetooth в параметрах Windows");
         return 1;
     }
     if (mode == "radio-cycle") {
@@ -58,8 +59,8 @@ if (mode == "publish" || mode == "publish-airdrop") {
     bool? control = mode == "publish" ? await Publish(0xFFFF, [0x01, 0x02, 0x03], "control") : null;
     var apple = await Publish(Apple, airdrop, "airdrop");
     Console.WriteLine($"RESULT control={control?.ToString() ?? "skipped"} airdrop={apple}");
-    Console.WriteLine("NOTE  'Started' means Windows accepted and is advertising it. It does not prove what " +
-                      "went on air: confirm with a second scanner (e.g. nRF Connect, filter company 0x004C).");
+    Console.WriteLine("ПРИМЕЧАНИЕ: Started означает, что Windows приняла объявление. Передачу по радио " +
+                      "проверяйте вторым сканером, например nRF Connect с фильтром компании 0x004C.");
     return apple ? 0 : 1;
 }
 
@@ -88,11 +89,11 @@ var status = watcher.Status;
 watcher.Stop();
 Console.WriteLine($"scan     {seconds} s, watcher status {status}");
 var names = new Dictionary<byte, string> {
-    [0x05] = "AirDrop", [0x07] = "Proximity pairing", [0x09] = "AirPlay target", [0x0c] = "Handoff",
-    [0x0f] = "Nearby action", [0x10] = "Nearby info", [0x12] = "Find My",
+    [0x05] = "AirDrop", [0x07] = "Сопряжение рядом", [0x09] = "Приёмник AirPlay", [0x0c] = "Handoff",
+    [0x0f] = "Действие рядом", [0x10] = "Сведения рядом", [0x12] = "Find My",
 };
 if (counts.Count == 0)
-    Console.WriteLine("scan     no Apple (0x004C) advertisements heard");
+    Console.WriteLine("Поиск: объявления Apple (0x004C) не обнаружены");
 foreach (var (type, n) in counts)
     Console.WriteLine($"apple    type 0x{type:x2} {names.GetValueOrDefault(type, "?"),-18} adverts={n} devices={devices[type].Count}");
 return 0;
@@ -114,7 +115,7 @@ async Task<bool> Publish(ushort company, byte[] data, string label) {
     try {
         pub.Start();
     } catch (Exception ex) {
-        Console.WriteLine($"{label,-8} company=0x{company:x4} data={hex}  START THREW: {ex.Message.Trim()}");
+        Console.WriteLine($"{label,-8} company=0x{company:x4} data={hex}  ОШИБКА ЗАПУСКА: {ex.Message.Trim()}");
         return false;
     }
     await Task.Delay(TimeSpan.FromSeconds(seconds));

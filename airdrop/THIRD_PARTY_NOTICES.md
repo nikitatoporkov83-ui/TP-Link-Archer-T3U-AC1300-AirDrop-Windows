@@ -1,6 +1,6 @@
-# AirDrop media capability metadata
+# Метаданные возможностей медиа AirDrop
 
-`media_capabilities.json` is from brentkearney/omdrop-plugin, `bin/airdrop-serve.py`, commit `37b40ac1d03153f60e954789cfd58a398375566a`.
+`media_capabilities.json` взят из brentkearney/omdrop-plugin, `bin/airdrop-serve.py`, коммит `37b40ac1d03153f60e954789cfd58a398375566a`. Полный текст лицензии и уведомление автора сохранены ниже.
 
 MIT License
 

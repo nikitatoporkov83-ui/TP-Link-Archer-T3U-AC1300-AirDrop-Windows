@@ -1,6 +1,8 @@
-# Render the editable PulseIt mark into Windows icon/setup formats. No extra packages.
+﻿# Render the editable Pulsar mark into Windows icon/setup formats. No extra packages.
 param([string]$Root = (Join-Path $PSScriptRoot '..'))
 $ErrorActionPreference = 'Stop'
+[Console]::OutputEncoding = [System.Text.UTF8Encoding]::new($false)
+$OutputEncoding = [Console]::OutputEncoding
 Add-Type -AssemblyName System.Drawing
 $brand = Join-Path $Root 'assets\brand'
 $setup = Join-Path $Root 'assets\installer'
@@ -30,7 +32,7 @@ function Mark-Bitmap([int]$Size) {
     return ,$bitmap
 }
 $logo = Mark-Bitmap 1024
-$logo.Save((Join-Path $brand 'pulseit.png'),[Drawing.Imaging.ImageFormat]::Png); $logo.Dispose()
+$logo.Save((Join-Path $brand 'pulsar.png'),[Drawing.Imaging.ImageFormat]::Png); $logo.Dispose()
 $sizes = @(16,24,32,48,64,128,256)
 $streams = @()
 foreach ($size in $sizes) {
@@ -39,7 +41,7 @@ foreach ($size in $sizes) {
     $bitmap.Save($stream,[Drawing.Imaging.ImageFormat]::Png)
     $streams += ,$stream.ToArray(); $stream.Dispose(); $bitmap.Dispose()
 }
-$file = [IO.File]::Create((Join-Path $brand 'PulseIt.ico'))
+$file = [IO.File]::Create((Join-Path $brand 'Pulsar.ico'))
 $writer = [IO.BinaryWriter]::new($file)
 $writer.Write([uint16]0); $writer.Write([uint16]1); $writer.Write([uint16]$sizes.Count)
 $offset = 6 + 16 * $sizes.Count
@@ -62,9 +64,9 @@ $muted = [Drawing.SolidBrush]::new([Drawing.Color]::FromArgb(160,180,205))
 $title = [Drawing.Font]::new('Segoe UI',17,[Drawing.FontStyle]::Bold,[Drawing.GraphicsUnit]::Pixel)
 $body = [Drawing.Font]::new('Segoe UI',13,[Drawing.FontStyle]::Regular,[Drawing.GraphicsUnit]::Pixel)
 $small = [Drawing.Font]::new('Segoe UI',10,[Drawing.FontStyle]::Regular,[Drawing.GraphicsUnit]::Pixel)
-$g.DrawString('PulseIt',$title,$white,22,110)
-$g.DrawString("From phone.`nTo PC.`nAnd back.",$body,$muted,22,146)
-$g.DrawString("Windows x64`nDeveloper preview",$small,$muted,22,266)
+$g.DrawString('Пульсар',$title,$white,22,110)
+$g.DrawString("С телефона.`nНа компьютер.`nИ обратно.",$body,$muted,22,146)
+$g.DrawString("Windows x64`nТестовая версия",$small,$muted,22,266)
 $panel.Save((Join-Path $setup 'wizard.bmp'),[Drawing.Imaging.ImageFormat]::Bmp)
 $g.Dispose(); $panel.Dispose(); $white.Dispose(); $muted.Dispose(); $title.Dispose(); $body.Dispose(); $small.Dispose()
 $smallMark = [Drawing.Bitmap]::new(110,110)
@@ -72,4 +74,4 @@ $g = [Drawing.Graphics]::FromImage($smallMark); $g.Clear([Drawing.Color]::White)
 Draw-Mark $g 10 10 90
 $smallMark.Save((Join-Path $setup 'wizard-small.bmp'),[Drawing.Imaging.ImageFormat]::Bmp)
 $g.Dispose(); $smallMark.Dispose()
-Write-Output 'Brand icons and setup panels rendered.'
+Write-Output 'Значки и панели установщика созданы.'

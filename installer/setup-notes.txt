@@ -1,13 +1,13 @@
-PulseIt for Windows x64 - local development build
+﻿Пульсар для Windows x64 — тестовая сборка
 
-Plug in one TP-Link Archer T3U with USB ID 2357:012d. This setup includes the app, Python, .NET, TAP-Windows6 and a USB driver binding helper. No iPhone app is needed.
+Подключите один TP-Link Archer T3U с USB ID 2357:012d. Комплект включает приложение, Python, .NET, TAP-Windows6 и помощник USB-драйвера. На iPhone ничего устанавливать не требуется.
 
-Choosing adapter configuration switches this TP-Link USB adapter to WinUSB, so it cannot provide ordinary Wi-Fi while PulseIt uses it. The original vendor driver is saved first; an already compatible Windows inbox driver is retained. Start menu > PulseIt > Restore USB Wi-Fi driver reverses the binding. Other USB adapters and Intel Bluetooth are not targets.
+Настройка переводит выделенный адаптер TP-Link в WinUSB: обычный Wi-Fi через него становится недоступен. Исходный драйвер сохраняется заранее; совместимый встроенный драйвер Windows остаётся доступен. Пуск → Пульсар → Восстановить драйвер Wi-Fi возвращает обычный режим. Другие USB-адаптеры и Intel Bluetooth не являются целью настройки.
 
-The USB helper uses libwdi to create the device-specific signed catalog locally, using Windows' existing WinUSB system driver. Windows may request driver/certificate approval. Existing WinUSB and awdl0 installations are reused.
+USB-помощник использует libwdi для локального создания подписанного каталога устройства и существующий системный WinUSB. Windows может запросить подтверждение драйвера или сертификата. Имеющиеся WinUSB и awdl0 используются повторно.
 
-Bluetooth stays on normally. If Windows blocks advertising, the app retries without resetting Bluetooth, then offers a recovery prompt. Approving recovery briefly disconnects Bluetooth accessories and restores the original Windows service states afterward.
+Обычно Bluetooth остаётся включённым. Если Windows блокирует объявление, приложение сначала повторяет попытку без перезапуска. Явное восстановление может ненадолго отключить аксессуары, затем возвращает исходные состояния служб.
 
-Files up to 1 GiB are streamed through bounded temporary files. Allow enough free disk space for the archive and extraction. Incoming files require approval. Keep your iPhone unlocked with Everyone for 10 Minutes enabled. Interrupted transfers never publish a partial file as complete.
+Файлы до 1 ГиБ передаются потоково с временными файлами и ограниченной памятью. Оставьте достаточно места для архива и распаковки. Входящие файлы требуют подтверждения. Держите iPhone разблокированным с AirDrop «Для всех на 10 минут». Прерванный файл не показывается как завершённый.
 
-This build is unsigned and has not yet been validated on a clean second PC. Hardware reliability and driver restoration tests are recorded in the bundled documentation. Received files and driver backups are retained on uninstall.
+Сборка не подписана и не проверена на чистом втором ПК. Состояние аппаратных проверок описано в документации. При удалении сохраняются полученные файлы и резервные копии драйвера.

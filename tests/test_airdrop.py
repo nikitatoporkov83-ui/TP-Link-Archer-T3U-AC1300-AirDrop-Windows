@@ -220,7 +220,7 @@ class HTTPTests(unittest.TestCase):
                 send_file(path, '::1', self.server.server_port, '::1', 0, '001122334455', ssl._create_unverified_context())
         self.assertEqual([call.args[1] for call in requests.call_args_list], ['/Discover', '/Ask'])
         self.assertEqual(send.error_event(refused.exception)['code'], 'peer_refused')
-        self.assertIn('transfer request (HTTP 403)', send.error_event(refused.exception)['message'])
+        self.assertIn('запрос на передачу (HTTP 403)', send.error_event(refused.exception)['message'])
         self.assertFalse(list(self.dest.glob('*/declined-sender.txt')))
 
     def test_https_client_and_receiver_disable_nagle_for_control_messages(self):

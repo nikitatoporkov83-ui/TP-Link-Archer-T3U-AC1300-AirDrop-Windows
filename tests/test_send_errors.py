@@ -24,8 +24,8 @@ class SendErrorTests(unittest.TestCase):
                 self.assertTrue(event['message'])
 
     def test_refused_upload_is_not_described_as_a_declined_approval(self):
-        self.assertIn('upload', error_event(PeerRefused('/Upload', 500))['message'])
-        self.assertIn('transfer request', error_event(PeerRefused('/Ask', 403))['message'])
+        self.assertIn('загрузку файла', error_event(PeerRefused('/Upload', 500))['message'])
+        self.assertIn('запрос на передачу', error_event(PeerRefused('/Ask', 403))['message'])
 
     def test_invalid_data_diagnostic_is_bounded_and_one_line(self):
         message = error_event(ValueError('bad\r\n' + 'x' * 1000))['message']

@@ -7,6 +7,8 @@ __pycache__/
 
 desktop/bin/
 desktop/obj/
+tests/localization/bin/
+tests/localization/obj/
 dist/
 
 # Runtime identities, credentials, captures and local environment files.

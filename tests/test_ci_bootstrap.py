@@ -21,6 +21,6 @@ class CiBootstrapTests(unittest.TestCase):
                                      '-File', str(script), '-Deps', str(root)],
                                     capture_output=True, text=True, timeout=20, env=env)
             self.assertNotEqual(result.returncode, 0)
-            self.assertIn('CI dependency hash mismatch: mingw.7z', result.stdout + result.stderr)
+            self.assertIn('Контрольная сумма зависимости CI не совпадает: mingw.7z', result.stdout + result.stderr)
             self.assertFalse((root / 'mingw64').exists())
             self.assertFalse((root / 'airdrop-venv').exists())

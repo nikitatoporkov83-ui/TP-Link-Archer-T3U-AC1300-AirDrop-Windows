@@ -1,5 +1,6 @@
 """Windows AirDrop research CLI. Everyone mode; explicit consent for each receive."""
 import argparse
+from ru_cli import ArgumentParser
 import io
 import tempfile
 import ctypes
@@ -25,7 +26,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 from protocol import MAX_FILE_BYTES, MAX_ARCHIVE_BYTES, MAX_FILES, decode_dvzip, parse_cpio
 
-NAME = 'Windows PC'
+NAME = 'Этот компьютер'
 MODEL = 'MacBookPro18,3'
 MAX_METADATA = 256 * 1024
 PEER_CONNECTIONS = 3      # concurrent connections per peer address
@@ -66,15 +67,15 @@ def read_body(handler, limit, complete=None, progress=None, target=None, quick=N
     te = handler.headers.get_all('Transfer-Encoding', [])
     cl = handler.headers.get_all('Content-Length', [])
     if len(te) > 1 or len(cl) > 1 or (te and cl):
-        raise ValueError('ambiguous request framing')
+        raise ValueError('неоднозначные границы запроса')
     def exact(n):
         data = handler.rfile.read(n)
         if len(data) != n:
-            raise ValueError('truncated body')
+            raise ValueError('тело запроса обрезано')
         return data
     if te:
         if te[0].lower().strip() != 'chunked':
-            raise ValueError('unsupported transfer encoding')
+            raise ValueError('неподдерживаемый способ кодирования передачи')
         checked = -1        # archive length at the last full completeness check
         quick_checked = -1  # archive length at the last quick probe
 
@@ -116,7 +117,7 @@ def read_body(handler, limit, complete=None, progress=None, target=None, quick=N
                                     done = 'full check'
                             if done:
                                 handler.close_connection = True
-                                print(f'Upload archive complete after {received} bytes ({done}); answering stalled final chunk', flush=True)
+                                print(f'Архив получен: {received} байт ({done}); ответ на задержавшийся завершающий блок', flush=True)
                                 return None
                         if time.monotonic() >= deadline:
                             raise
@@ -125,7 +126,7 @@ def read_body(handler, limit, complete=None, progress=None, target=None, quick=N
                         if not line and received and is_complete():
                             handler.close_connection = True
                             return None
-                        raise ValueError(f'upload ended before chunk header (received={received} bytes)')
+                        raise ValueError(f'передача прервана до заголовка блока (получено байт: {received})')
                     take = min(len(available), 128 - len(line))
                     newline = available.find(b'\n', 0, take)
                     line.extend(reader.read(newline + 1 if newline >= 0 else take))
@@ -140,30 +141,30 @@ def read_body(handler, limit, complete=None, progress=None, target=None, quick=N
             if line is None:
                 return finish("archive-validated-without-final-chunk")
             if not line.endswith(b'\r\n'):
-                raise ValueError(f'invalid chunk header (line_bytes={len(line)}, received={received} bytes)')
+                raise ValueError(f'некорректный заголовок блока (длина строки: {len(line)}, получено байт: {received})')
             token = line.split(b';', 1)[0].strip()
             if not token or any(c not in b'0123456789abcdefABCDEF' for c in token):
-                raise ValueError('invalid chunk size')
+                raise ValueError('недопустимый размер блока')
             size = int(token, 16)
             if size > limit - received:
-                raise ValueError('request exceeds size limit')
+                raise ValueError('запрос превышает допустимый размер')
             if not size:
                 trailer_size = 0
                 while True:
                     line = handler.rfile.readline(1024)
                     trailer_size += len(line)
                     if not line.endswith(b'\r\n') or trailer_size > 8192:
-                        raise ValueError('invalid chunk trailer')
+                        raise ValueError('некорректная завершающая часть блока')
                     if line == b'\r\n':
                         return finish('zero-chunk-and-trailer')
             copy(size)
             if exact(2) != b'\r\n':
-                raise ValueError('invalid chunk terminator')
+                raise ValueError('некорректное окончание блока')
     if not cl or not cl[0].isascii() or not cl[0].isdigit():
-        raise ValueError('Content-Length or chunked body required')
+        raise ValueError('нужен Content-Length или передача тела по блокам')
     length = int(cl[0])
     if length > limit:
-        raise ValueError('request exceeds size limit')
+        raise ValueError('запрос превышает допустимый размер')
     copy(length)
     return finish()
 
@@ -204,7 +205,7 @@ def mark_of_the_web(path):
         with open(f'{path}:Zone.Identifier', 'w', encoding='ascii') as zone:
             zone.write('[ZoneTransfer]\r\nZoneId=3\r\nReferrerUrl=airdrop:\r\n')
     except OSError as error:
-        print(f'Could not mark {path.name} as downloaded: {type(error).__name__}', flush=True)
+        print(f'Не удалось пометить {path.name} как загруженный: {type(error).__name__}', flush=True)
 
 
 def confirm_receive(sender, files):
@@ -222,7 +223,7 @@ def read_answers(stream):
                 return
             _answers.put(json.loads(line))
         except Exception as error:  # one bad line must not stop later answers
-            print(f'Ignored desktop answer: {type(error).__name__}', flush=True)
+            print(f'Ответ приложения пропущен: {type(error).__name__}', flush=True)
 
 
 def ui_confirm(sender, files, timeout=55):
@@ -247,13 +248,13 @@ def ui_confirm(sender, files, timeout=55):
 def display_name(value):
     value = ''.join(c for c in value if c.isprintable()).strip()
     if not 1 <= len(value) <= 40:
-        raise argparse.ArgumentTypeError('name must be 1-40 printable characters')
+        raise argparse.ArgumentTypeError('имя должно содержать от 1 до 40 печатных символов')
     return value
 
 
 def model_name(value):
     if not re.fullmatch(r'[A-Za-z]{2,16}\d{1,3},\d{1,3}', value):
-        raise argparse.ArgumentTypeError('invalid model identifier')
+        raise argparse.ArgumentTypeError('недопустимый идентификатор модели')
     return value
 
 
@@ -321,7 +322,7 @@ def make_server(address, port, destination, confirm=confirm_receive, receiver_na
                 self.request.do_handshake()
             except (ssl.SSLError, OSError) as error:
                 self.watchdog.cancel()
-                print(f'TLS handshake failed: {type(error).__name__}: {clean(error)}', flush=True)
+                print(f'Ошибка согласования TLS: {type(error).__name__}: {clean(error)}', flush=True)
                 self.close_connection = True
                 raise
             super().setup()
@@ -355,12 +356,12 @@ def make_server(address, port, destination, confirm=confirm_receive, receiver_na
                     self.approved = None  # one upload per explicit approval
                     header_id = self.headers.get('TransferID')
                     if transfer_id and header_id and header_id != transfer_id:
-                        raise ValueError('transfer identifier mismatch')
+                        raise ValueError('идентификатор передачи не совпадает')
                     self.watchdog.cancel()
                     self.watchdog = threading.Timer(UPLOAD_SECONDS, self.abort)
                     self.watchdog.daemon = True
                     self.watchdog.start()
-                    print('Upload started; reading approved archive', flush=True)
+                    print('Загрузка началась; чтение подтверждённого архива', flush=True)
                     from protocol import safe_name
                     label = safe_name(str(asked_files[0].get('FileName', 'file')))
                     if len(asked_files) > 1:
@@ -376,18 +377,18 @@ def make_server(address, port, destination, confirm=confirm_receive, receiver_na
                     from streaming import complete, likely_complete, receive
                     approved = {safe_name(f['FileName']): f.get('FileSize', 0) for f in asked_files}
                     if len(approved) != len(asked_files):
-                        raise ValueError('duplicate approved file names')
+                        raise ValueError('повторяющиеся имена подтверждённых файлов')
                     with tempfile.TemporaryFile(dir=destination) as raw:
                         read_body(self, MAX_ARCHIVE_BYTES, lambda body: complete(body, destination), progress, target=raw,
                                   quick=likely_complete)
                         try:
                             final_dir, receipts = receive(raw, destination, approved, mark_of_the_web)
                         except OSError as error:
-                            print(f'Could not save transfer: {type(error).__name__}', flush=True)
+                            print(f'Не удалось сохранить передачу: {type(error).__name__}', flush=True)
                             self.answer(500)
                             return
                     for receipt in receipts: print(json.dumps(receipt), flush=True)
-                    print(f'Saved transfer to {final_dir}', flush=True)
+                    print(f'Передача сохранена в {final_dir}', flush=True)
                     self.answer(200)
                     return
                 if self.path not in ('/Discover', '/Ask'):
@@ -395,26 +396,26 @@ def make_server(address, port, destination, confirm=confirm_receive, receiver_na
                     return
                 data = plistlib.loads(read_body(self, MAX_METADATA))
                 if not isinstance(data, dict):
-                    raise ValueError('metadata must be a dictionary')
+                    raise ValueError('метаданные должны быть словарём')
                 if self.path == '/Ask':
                     peer = self.client_address[0]
                     files = data.get('Files')
                     if not isinstance(files, list) or not 1 <= len(files) <= MAX_FILES:
-                        raise ValueError('only file transfers are supported')
+                        raise ValueError('поддерживается только передача файлов')
                     total = 0
                     for f in files:
                         if not isinstance(f, dict) or not isinstance(f.get('FileName'), str) or len(f['FileName']) > 1024:
-                            raise ValueError('invalid file metadata')
+                            raise ValueError('некорректные метаданные файла')
                         size = f.get('FileSize', 0)
                         if type(size) is not int or size < 0 or f.get('FileIsDirectory'):
-                            raise ValueError('invalid file size or directory transfer')
+                            raise ValueError('недопустимый размер файла или попытка передачи папки')
                         total += size
                     if total > MAX_FILE_BYTES:
-                        raise ValueError('transfer exceeds 1 GiB')
+                        raise ValueError('передача превышает 1 ГиБ')
                     if shutil.disk_usage(destination).free < total * 3 + 64 * 1024 * 1024:
-                        raise ValueError('not enough free disk space for this transfer')
+                        raise ValueError('недостаточно свободного места для передачи')
                     if time.monotonic() < cooldown.get(peer, 0) or not ask_slot.acquire(blocking=False):
-                        print(f'Declined ask from {peer}: another request is pending or it was just declined', flush=True)
+                        print(f'Запрос от {peer} отклонён: другой запрос ожидает ответа или этот запрос только что отклонили', flush=True)
                         self.answer(403)
                         return
                     try:
@@ -432,11 +433,11 @@ def make_server(address, port, destination, confirm=confirm_receive, receiver_na
                 self.answer(200, plistlib.dumps({'ReceiverComputerName': receiver_name, 'ReceiverModelName': receiver_model,
                     'ReceiverMediaCapabilities': MEDIA_CAPABILITIES, 'IsAirDropable': True}, fmt=plistlib.FMT_BINARY))
             except (ValueError, plistlib.InvalidFileException, UnicodeError, OverflowError, RecursionError) as error:
-                print(f'Refused malformed transfer: {clean(error)}', flush=True)
+                print(f'Некорректная передача отклонена: {clean(error)}', flush=True)
                 self.answer(400)
             except (OSError, ssl.SSLError) as error:
                 self.close_connection = True
-                print(f'Transfer connection failed: {type(error).__name__}', flush=True)
+                print(f'Ошибка соединения передачи: {type(error).__name__}', flush=True)
 
     server = Server(address, Handler)
     server.cooldown = cooldown
@@ -452,7 +453,7 @@ def save(destination, files):
         used = set()
         for name, data in files:
             if name.casefold() in used:
-                raise ValueError('duplicate output name')
+                raise ValueError('повторяющееся имя выходного файла')
             used.add(name.casefold())
             with (transfer_dir / name).open('xb') as out:
                 out.write(data)
@@ -460,7 +461,7 @@ def save(destination, files):
             receipts.append({'received': name, 'bytes': len(data), 'sha256': hashlib.sha256(data).hexdigest()})
     except BaseException:
         if transfer_dir.resolve().parent != destination.resolve():
-            raise ValueError('invalid cleanup directory')
+            raise ValueError('недопустимая папка очистки')
         shutil.rmtree(transfer_dir)
         raise
     final_dir = destination / transfer_id
@@ -470,7 +471,7 @@ def save(destination, files):
 
 def serve(args):
     from ownership import receiver_lease
-    destination = Path.home() / 'Downloads' / 'Windows AirDrop'
+    destination = Path.home() / 'Downloads' / 'Пульсар'
     destination.mkdir(parents=True, exist_ok=True)
     with receiver_lease(destination):
         serve_locked(args, destination)
@@ -480,7 +481,7 @@ def serve_locked(args, destination):
     from zeroconf import Zeroconf, ServiceInfo, IPVersion
     ip = ipaddress.IPv6Address(args.address.split('%')[0])
     if not ip.is_link_local:
-        raise SystemExit('receiver must bind the AWDL link-local address')
+        raise SystemExit('приёмник должен использовать локальный адрес канала AWDL')
     # Folder age cannot prove another receiver has released its staging files.
     cert, key = certificate(Path.home() / '.windows-airdrop' / 'identity', args.sid)
     context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
@@ -500,7 +501,7 @@ def serve_locked(args, destination):
         timer = threading.Timer(args.seconds, server.shutdown)
         timer.daemon = True
         timer.start()
-        print(f'{args.name} receiving on [{ip}%{args.ifindex}]:8771 into {destination}', flush=True)
+        print(f'{args.name} принимает на [{ip}%{args.ifindex}]:8771 в {destination}', flush=True)
         server.serve_forever()
     finally:
         zc.unregister_service(info)
@@ -509,14 +510,14 @@ def serve_locked(args, destination):
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser()
+    parser = ArgumentParser()
     parser.add_argument('--address', required=True)
     parser.add_argument('--ifindex', type=int, required=True)
     parser.add_argument('--sid', required=True)
     parser.add_argument('--seconds', type=int, default=300)
     parser.add_argument('--name', type=display_name, default=NAME)
     parser.add_argument('--model', type=model_name, default=MODEL)
-    parser.add_argument('--ui-consent', action='store_true', help='ask the desktop app over stdin/stdout')
+    parser.add_argument('--ui-consent', action='store_true', help='запрашивать подтверждение у приложения через stdin/stdout')
     args = parser.parse_args()
     if not 1 <= args.seconds <= 3600 or len(args.sid) != 12 or any(c not in '0123456789abcdef' for c in args.sid):
         parser.error('invalid duration or service ID')

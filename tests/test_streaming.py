@@ -19,7 +19,7 @@ class StreamingTests(unittest.TestCase):
     def test_prepare_shrinks_text_but_preserves_incompressible_data_and_hashes(self):
         with tempfile.TemporaryDirectory() as folder:
             root = Path(folder)
-            for name, content, compressible in [('notes.txt', b'PulseIt document line\n' * 50000, True),
+            for name, content, compressible in [('notes.txt', b'Pulsar document line\n' * 50000, True),
                                                 ('noise.bin', os.urandom(256 * 1024), False)]:
                 path = root / name
                 path.write_bytes(content)
@@ -87,7 +87,7 @@ class StreamingTests(unittest.TestCase):
         from types import SimpleNamespace
         with tempfile.TemporaryDirectory() as folder:
             root = Path(folder)
-            staging = root / 'Downloads' / 'Windows AirDrop' / '.incoming-other-session'
+            staging = root / 'Downloads' / 'Пульсар' / '.incoming-other-session'
             staging.mkdir(parents=True)
             data = staging / 'unfinished.bin'
             data.write_bytes(b'active transfer')
@@ -102,7 +102,7 @@ class StreamingTests(unittest.TestCase):
     def test_likely_complete_accepts_only_a_whole_dvzip_archive(self):
         with tempfile.TemporaryDirectory() as folder:
             path = Path(folder) / 'clip.bin'
-            path.write_bytes(os.urandom(300 * 1024) + b'PulseIt text\n' * 20000)
+            path.write_bytes(os.urandom(300 * 1024) + b'Pulsar text\n' * 20000)
             with tempfile.TemporaryFile() as body:
                 streaming.prepare(path, body)
                 whole = body.seek(0, 2)
@@ -138,7 +138,7 @@ class StreamingTests(unittest.TestCase):
         self.assertTrue(streaming.complete(io.BytesIO(whole)))
 
     def test_likely_complete_memory_is_bounded_for_a_large_compressed_block(self):
-        archive = encode_cpio([('big.txt', b'PulseIt text line\n' * (32 * 1024 * 1024 // 20))])
+        archive = encode_cpio([('big.txt', b'Pulsar text line\n' * (32 * 1024 * 1024 // 20))])
         data = zlib.compress(archive)
         body = io.BytesIO(len(data).to_bytes(4, 'big') + data)
         tracemalloc.start()

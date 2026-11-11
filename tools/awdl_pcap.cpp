@@ -1,7 +1,7 @@
 /* Replay a capture (pcap, DLT 105: 802.11 without radiotap, as awdlcap writes)
  * through OWL's AWDL parser and report what OWL learns about each peer.
  *
- *   awdl_pcap <capture.pcap>...
+ *   awdl_pcap <запись.pcap>...
  */
 extern "C" {
 #include "election.h"
@@ -18,9 +18,19 @@ extern "C" {
 
 static const struct ether_addr SELF = {{0x02, 0x00, 0x00, 0x00, 0x00, 0x99}};
 
+#ifdef _WIN32
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#include <windows.h>
+#endif
+
 int main(int argc, char **argv) {
+#ifdef _WIN32
+    SetConsoleOutputCP(CP_UTF8);
+#endif
 	if (argc < 2) {
-		fprintf(stderr, "usage: awdl_pcap <capture.pcap>...\n");
+		fprintf(stderr, "Использование: awdl_pcap <запись.pcap>...\n");
 		return 2;
 	}
 	struct awdl_state st;
@@ -33,7 +43,7 @@ int main(int argc, char **argv) {
 		FILE *f = fopen(argv[a], "rb");
 		uint32_t gh[6];
 		if (!f || fread(gh, 4, 6, f) != 6 || gh[0] != 0xa1b2c3d4 || gh[5] != 105) {
-			fprintf(stderr, "%s: not a DLT 105 pcap\n", argv[a]);
+			fprintf(stderr, "%s: не является записью pcap DLT 105\n", argv[a]);
 			return 1;
 		}
 		uint32_t rh[4];

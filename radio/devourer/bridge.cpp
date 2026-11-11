@@ -30,8 +30,9 @@ static const char *rate_name(unsigned code, char *buf, size_t len) {
 }
 
 int main(int argc, char **argv) {
+    SetConsoleOutputCP(CP_UTF8);
     bool trace = false, no_ack = false, width20 = false;
-    if (argc < 2 || argc > 5) { fprintf(stderr, "usage: devourer-bridge <local-pipe-name> [--no-ack] [--trace] [--width20]\n"); return 2; }
+    if (argc < 2 || argc > 5) { fprintf(stderr, "Использование: devourer-bridge <имя-локального-канала> [--no-ack] [--trace] [--width20]\n"); return 2; }
     for (int i = 2; i < argc; i++) {
         if (!strcmp(argv[i], "--trace")) trace = true;
         else if (!strcmp(argv[i], "--no-ack")) no_ack = true;

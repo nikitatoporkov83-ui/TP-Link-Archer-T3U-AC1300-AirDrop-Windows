@@ -1,4 +1,4 @@
-param(
+﻿param(
     [ValidateSet(6,36,44,149)][int]$Channel = 6,
     [ValidateRange(1,3600)][int]$Seconds = 300,
     [ValidateRange(0,65535)][int]$ServicePort = 0,
@@ -7,6 +7,8 @@ param(
     [switch]$Probe
 )
 $ErrorActionPreference = 'Stop'
+[Console]::OutputEncoding = [System.Text.UTF8Encoding]::new($false)
+$OutputEncoding = [Console]::OutputEncoding
 $awdlRepo = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 $awdlDeps = (Resolve-Path (Join-Path $awdlRepo '..\deps')).Path
 $awdlToolchain = Join-Path $env:USERPROFILE 'scoop\apps\mingw\current\bin'
@@ -26,11 +28,11 @@ try {
     if ($Probe) { $awdlArgs += '--probe' }
     $awdlLink = Start-Process (Join-Path $awdlRepo 'build\awdl_link.exe') -ArgumentList $awdlArgs -WindowStyle Hidden -PassThru -RedirectStandardOutput (Join-Path $awdlLog 'link.stdout.log') -RedirectStandardError (Join-Path $awdlLog 'link.stderr.log')
     @{radioPid=$awdlBridge.Id; linkPid=$awdlLink.Id; log=$awdlLog; stopFile=$awdlStopFile} | ConvertTo-Json | Set-Content (Join-Path $awdlDeps 'active-awdl-run.json')
-    Write-Output "AWDL logs: $awdlLog"
+    Write-Output "Журналы AWDL: $awdlLog"
     $awdlLink.WaitForExit()
     $awdlBridge.WaitForExit(10000) | Out-Null
     Get-Content (Join-Path $awdlLog 'link.stdout.log')
-    if ($awdlLink.ExitCode) { throw "AWDL link exited with $($awdlLink.ExitCode)" }
+    if ($awdlLink.ExitCode) { throw "Процесс AWDL завершился с кодом $($awdlLink.ExitCode)" }
 } finally {
     if ($awdlBridge -and -not $awdlBridge.HasExited) { $awdlBridge.Kill() }
 }

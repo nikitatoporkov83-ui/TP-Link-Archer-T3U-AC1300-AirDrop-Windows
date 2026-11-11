@@ -1,10 +1,10 @@
-# Building PulseIt
+# Сборка Пульсар
 
-Use Windows x64, Git/Git Bash, CMake 3.20+, Ninja, MinGW-w64 GCC, .NET 8 SDK and Python 3.11+. MSVC `cl` is unsupported for the OWL core. Keep a sibling `deps/` directory beside this checkout for downloads. Ordinary builds and tests do not install drivers.
+Полная сборка выполняется на Windows x64. Нужны Git/Git Bash, CMake 3.20+, Ninja, MinGW-w64 GCC, .NET SDK 8 и Python 3.11+. MSVC `cl` для ядра OWL не поддерживается. Для загрузок используйте соседний с репозиторием каталог `deps/`. Обычная сборка и тесты не устанавливают драйверы.
 
-## Native protocol and tests
+## Нативные компоненты и тесты
 
-In Git Bash with GCC and Ninja on PATH:
+В Git Bash, когда GCC и Ninja доступны через PATH:
 
 ```bash
 cmake -S . -B build -G Ninja -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++
@@ -12,36 +12,49 @@ cmake --build build
 ctest --test-dir build --output-on-failure
 ```
 
-CMake fetches pinned OWL, omdrop-owl and GoogleTest revisions. Local `win-*.patch` files apply after the pinned omdrop-owl series. The TAP round-trip test skips without an installed TAP adapter and administrator access; the timing benchmark is opt-in. A skip is not hardware acceptance.
+CMake получает закреплённые версии OWL, omdrop-owl и GoogleTest. Локальные `win-*.patch` применяются после исправлений omdrop-owl. Проверка TAP пропускается без установленного адаптера и прав администратора; тест времени включается отдельно. Пропуск не подтверждает работу оборудования.
 
-## Python and desktop
+## Python и интерфейс
 
-In PowerShell at the repository root:
+В PowerShell из корня репозитория:
 
 ```powershell
 py -3 -m venv ..\deps\airdrop-venv
-..\deps\airdrop-venv\Scripts\python.exe -m pip install -r airdrop\requirements.txt
+..\deps\airdrop-venv\Scripts\python.exe -m pip install -r installer\requirements.txt
 ..\deps\airdrop-venv\Scripts\python.exe -m unittest discover -s tests -p 'test_*.py'
-dotnet build desktop\PulseIt.csproj -c Release
+dotnet build desktop\Pulsar.csproj -c Release
 dotnet build tools\bleprobe\bleprobe.csproj -c Release
 ```
 
-The automated PowerShell recovery tests mock services and the Bluetooth radio; they do not modify the live OS. In contrast, desktop `--lifecycle-test`, `--lifecycle-soak-test` and `--recovery-test` access actual hardware and can disrupt adapters.
+Автоматические PowerShell-тесты восстановления подменяют службы и Bluetooth, не меняя живую систему. Режимы `--lifecycle-test`, `--lifecycle-soak-test` и `--recovery-test` работают с настоящим оборудованием и могут прерывать соединение адаптеров.
 
-## Bridge and local bundle
+Скрипты PowerShell и описание Inno Setup сохранены в UTF-8 с BOM для корректного чтения кириллицы в Windows PowerShell 5.1. Отображаемое имя — «Пульсар», сборка — `Pulsar.exe`, проект — `desktop/Pulsar.csproj`.
 
-Run `tools/build-devourer.sh` from Git Bash to build pinned OpenIPC devourer and the separate GPL-2.0-only bridge. It also requires `gh`, GnuPG, pkgconf and 7-Zip, and verifies the official libusb release signature. Do not combine devourer objects with an OWL-linked target.
+## Отдельный радиомост и локальный комплект
 
-After building and configuring devices, `tools/package-desktop.ps1 -Destination <absolute-output-folder> -NoShortcuts` creates an administrator-protected local bundle. It requires elevated PowerShell and locks the destination and its Python environment against non-administrator writes. Use a dedicated environment and destination. This bundle references its sibling Python environment and is not portable.
+Запустите `tools/build-devourer.sh` из Git Bash. Также нужны `gh`, GnuPG, pkgconf и 7-Zip. Скрипт получает закреплённый devourer и проверяет официальную подпись libusb. Не связывайте объекты devourer с компонентом OWL.
 
-## Optional installer
+После сборки и настройки устройств команда `tools/package-desktop.ps1 -Destination <абсолютный-каталог> -NoShortcuts` создаёт локальный комплект. PowerShell должен иметь права администратора: каталог и Python-окружение защищаются от записи обычными процессами. Используйте отдельные каталог и окружение. Такой комплект ссылается на соседний Python и не является переносимым установщиком.
 
-The manual **Unsigned development installer** GitHub Actions workflow builds the native engines, USB helper, managed apps and complete installer on a GitHub-hosted Windows runner. It uploads an unsigned installer, corresponding source, payload manifest and build-origin record; it neither publishes a release nor requests signing. Run it from the Actions tab after publishing reviewed source. The workflow has been linted and its build steps tested locally; a successful hosted run is still required.
+## Установщик
 
-For the same dependency bootstrap locally, run `tools/bootstrap-ci.ps1`, build the native targets and radio bridge, then run `tools/build-installer.ps1 -MingwRoot ../deps/mingw64`. Bootstrap downloads and validates the TAP package without installing it. Compiler and redistributable archives have pinned hashes; hosted runner tools, MSYS2 helper packages and the .NET 8 servicing SDK can change, so this is not a promise of byte-identical builds.
+Ручной процесс GitHub Actions **«Тестовый установщик без подписи»** собирает движки, USB-помощник, интерфейс и установщик на Windows. Он сохраняет неподписанный артефакт, исходники, манифест и происхождение сборки. Процесс не публикует выпуск и не запрашивает подпись; успешный запуск на сервере требуется отдельно.
 
-`tools/build-installer.ps1` expects the native engines, sibling Python environment, signed TAP-Windows6 9.27.0 package under `../deps/tap-9.27.0/dist.win10/amd64`, MinGW and 7-Zip. Downloads are pinned in `installer/dependencies.json`. It is not a one-command bootstrap of a clean PC. See [installer notes](../installer/README.md).
+Для локальной подготовки зависимостей выполните `tools/bootstrap-ci.ps1`, соберите нативные компоненты и радиомост, затем `tools/build-installer.ps1 -MingwRoot ../deps/mingw64`. Загрузки проверяются по закреплённым суммам; TAP при подготовке не устанавливается. Инструменты сервера и обслуживаемый .NET SDK могут обновляться, поэтому побайтовая идентичность сборок не гарантируется.
 
-Device configuration is separate: `Setup-Devices.ps1 -Action Inspect` is read-only; `Configure` changes supported drivers and scoped firewall rules; `Restore` attempts to restore the saved vendor Wi-Fi driver. Inspect USB IDs first and close PulseIt before configuration.
+Для упаковки нужны движки, соседнее Python-окружение, подписанный TAP-Windows6 9.27.0 в `../deps/tap-9.27.0/dist.win10/amd64`, MinGW и 7-Zip. Загрузки закреплены в `installer/dependencies.json`. Описание установки — в [installer/README.md](../installer/README.md).
 
-Before distributing binaries, rebuild from reviewed public source, inspect embedded source/notices, sign the binaries/installer and validate clean-PC installation, transfers, cancellation, unplug/replug and restoration. Existing local installers may embed private historical documentation and must not be uploaded.
+`Setup-Devices.ps1 -Action Inspect` только читает состояние. `Configure` меняет поддерживаемые драйверы и ограниченные правила брандмауэра. `Restore` восстанавливает сохранённый или встроенный драйвер Wi-Fi. Перед настройкой проверьте USB ID и закройте Пульсар.
+
+Перед распространением проверьте встроенные исходники и лицензии, подпишите артефакты и испытайте установку на чистом ПК, отмену, отключение адаптера, повторное подключение и восстановление драйвера. Старые локальные установщики источника могут содержать личные записи и не должны загружаться без пересборки и проверки.
+
+## Проверки в Linux
+
+Python-проверки описаны в [облачных инструкциях](cloud-environment.md). Для проверки компиляции Windows-проектов на Linux с .NET SDK 8 можно использовать:
+
+```bash
+dotnet build desktop/Pulsar.csproj -c Release -p:EnableWindowsTargeting=true
+dotnet build tools/bleprobe/bleprobe.csproj -c Release -p:EnableWindowsTargeting=true
+```
+
+Такая сборка не запускает Windows-приложение, драйверы или радио и не заменяет аппаратную проверку.

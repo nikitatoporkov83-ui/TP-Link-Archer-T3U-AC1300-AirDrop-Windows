@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <AssemblyName>Pulsar</AssemblyName>
+    <RootNamespace>Pulsar</RootNamespace>
+    <Title>Пульсар</Title>
+    <AssemblyTitle>Пульсар</AssemblyTitle>
+    <Product>Пульсар</Product>
+    <Description>Обмен файлами между iPhone и Windows через AirDrop</Description>
+    <ApplicationIcon>..\assets\brand\Pulsar.ico</ApplicationIcon>
+    <Version>0.2.7</Version>
+  </PropertyGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="..\assets\brand\Pulsar.ico" LogicalName="Pulsar.Icon" />
+  </ItemGroup>
+</Project>

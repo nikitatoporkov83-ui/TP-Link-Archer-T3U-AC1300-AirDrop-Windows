@@ -1,9 +1,11 @@
-param(
+﻿param(
     [Parameter(Mandatory=$true)][string]$BleExe,
     [string]$LogDirectory,
     [switch]$Inspect
 )
 $ErrorActionPreference = 'Stop'
+[Console]::OutputEncoding = [System.Text.UTF8Encoding]::new($false)
+$OutputEncoding = [Console]::OutputEncoding
 trap { if ($awdlPublisher -and -not $awdlPublisher.HasExited) { $awdlPublisher.Kill() }; Write-Output ($_ | Out-String); Write-Output $_.ScriptStackTrace; try { Stop-Transcript | Out-Null } catch { }; exit 1 }
 $awdlStopped = @()
 $awdlStartedBluetooth = $false
@@ -13,7 +15,7 @@ $awdlReady = $false
 $awdlRecoveryClock = [Diagnostics.Stopwatch]::StartNew()
 $awdlSoftMs = 0
 if (-not $Inspect) {
-    if (-not $LogDirectory) { throw 'A session log directory is required.' }
+    if (-not $LogDirectory) { throw 'Нужна папка журналов сеанса.' }
     Start-Transcript -LiteralPath (Join-Path $LogDirectory 'recovery.log') -Force | Out-Null
 }
 # Identify this user's per-user service instead of pausing another logged-in user's session.
@@ -25,17 +27,17 @@ $awdlCdp = Get-CimInstance Win32_Service -Filter "Name LIKE 'CDPUserSvc_%'" | Wh
         $awdlOwner.Sid -eq $awdlSid
     }
 } | Select-Object -First 1
-if (-not $awdlCdp) { throw 'Cannot safely identify the current user connected-device service. No services were changed.' }
+if (-not $awdlCdp) { throw 'Не удалось безопасно определить службу подключённых устройств текущего пользователя. Службы не изменены.' }
 $awdlSuffix = $awdlCdp.Name.Substring('CDPUserSvc_'.Length)
 $awdlBluetoothName = 'BluetoothUserService_' + $awdlSuffix
-if ($Inspect) { Write-Output "Current-user service: $($awdlCdp.Name); Bluetooth service: $awdlBluetoothName"; return }
+if ($Inspect) { Write-Output "Служба пользователя: $($awdlCdp.Name); служба Bluetooth: $awdlBluetoothName"; return }
 try {
     foreach ($awdlName in @($awdlCdp.Name, 'CDPSvc')) {
         $awdlService = Get-Service -Name $awdlName
         if ($awdlService.Status -eq 'Running') {
             $awdlService.Stop(); $awdlStopped += $awdlName
             $awdlService.WaitForStatus('Stopped', [TimeSpan]::FromSeconds(10))
-            Write-Output "Paused $awdlName"
+            Write-Output "Приостановлено: $awdlName"
         }
     }
     $awdlBluetooth = Get-Service -Name $awdlBluetoothName
@@ -62,30 +64,30 @@ try {
     $awdlCycled = $false
     $awdlReady = Start-Publisher '-soft' 50
     $awdlSoftMs = $awdlRecoveryClock.ElapsedMilliseconds
-    if ($awdlReady) { Write-Output 'Bluetooth AirDrop advertising started without switching Bluetooth off.' }
+    if ($awdlReady) { Write-Output 'Объявление AirDrop по Bluetooth запущено без выключения Bluetooth.' }
     else {
-        Write-Output 'Advertising still blocked with connected-device services paused; switching Bluetooth off and on.'
+        Write-Output 'Объявление по-прежнему заблокировано после приостановки служб; перезапускаем Bluetooth.'
         & $BleExe radio-cycle
-        if ($LASTEXITCODE) { throw 'Bluetooth radio cycle was refused.' }
+        if ($LASTEXITCODE) { throw 'Перезапуск Bluetooth отклонён.' }
         $awdlCycled = $true
         $awdlReady = Start-Publisher '' 150
-        if ($awdlReady) { Write-Output 'Bluetooth AirDrop advertising started.' }
+        if ($awdlReady) { Write-Output 'Объявление AirDrop по Bluetooth запущено.' }
     }
-    if (-not $awdlReady) { throw 'Bluetooth advertising did not start. Inspect recovery-bluetooth logs.' }
+    if (-not $awdlReady) { throw 'Объявление Bluetooth не запущено. Проверьте журналы recovery-bluetooth.' }
 } finally {
     if (-not $awdlReady -and $awdlPublisher -and -not $awdlPublisher.HasExited) { $awdlPublisher.Kill() }
     if ($awdlStartedBluetooth) {
-        try { Stop-Service -Name $awdlBluetoothName; (Get-Service -Name $awdlBluetoothName).WaitForStatus('Stopped', [TimeSpan]::FromSeconds(10)); Write-Output "Restored $awdlBluetoothName to stopped" }
+        try { Stop-Service -Name $awdlBluetoothName; (Get-Service -Name $awdlBluetoothName).WaitForStatus('Stopped', [TimeSpan]::FromSeconds(10)); Write-Output "Восстановлено остановленное состояние $awdlBluetoothName" }
         catch { $awdlFailures += $_.Exception.Message }
     }
     [array]::Reverse($awdlStopped)
     foreach ($awdlName in $awdlStopped) {
-        try { Start-Service -Name $awdlName; (Get-Service -Name $awdlName).WaitForStatus('Running', [TimeSpan]::FromSeconds(10)); Write-Output "Restored $awdlName" }
+        try { Start-Service -Name $awdlName; (Get-Service -Name $awdlName).WaitForStatus('Running', [TimeSpan]::FromSeconds(10)); Write-Output "Восстановлено: $awdlName" }
         catch { $awdlFailures += $_.Exception.Message }
     }
     if ($awdlFailures.Count) {
         if ($awdlPublisher -and -not $awdlPublisher.HasExited) { $awdlPublisher.Kill() }
-        throw ('Service restoration failed: ' + ($awdlFailures -join '; '))
+        throw ('Ошибка восстановления служб: ' + ($awdlFailures -join '; '))
     }
 }
 # Restoring services can reclaim the shared advertising resource. Check the latest state,
@@ -93,7 +95,7 @@ try {
 Start-Sleep -Milliseconds 1000
 $awdlLatest = Get-Content -LiteralPath $awdlPublisherLog | Select-String 'airdrop state=' | Select-Object -Last 1
 if ($awdlPublisher.HasExited -or -not $awdlLatest -or $awdlLatest.Line -notmatch 'airdrop state=Started error=Success') {
-    throw 'Bluetooth advertising was lost after service restoration. No publisher was handed to the app.'
+    throw 'После восстановления служб объявление Bluetooth остановилось. Процесс объявления не передан приложению.'
 }
 # The app adopts this exact child and releases it on Stop. Services are already restored.
 Write-Output "advertiser_pid=$($awdlPublisher.Id)"

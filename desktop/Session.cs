@@ -2,13 +2,14 @@ using System.Diagnostics;
 using System.Net;
 using System.Net.NetworkInformation;
 using System.Runtime.InteropServices;
+using System.Runtime.Versioning;
 using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 
-namespace PulseIt;
+namespace Pulsar;
 
-sealed class BluetoothBusyException() : IOException("Windows blocked Bluetooth advertising. Recovery can briefly reconnect Bluetooth accessories.");
+sealed class BluetoothBusyException() : IOException("Windows заблокировала объявление по Bluetooth. Восстановление может ненадолго переподключить аксессуары.");
 
 record Ask(string Id, string Sender, string[] Files, long Bytes);
 
@@ -17,9 +18,9 @@ record Device(string Name, string Address, int Port)
     public override string ToString() => Name;
     public static Device Validate(string name, string address, int port)
     {
-        if (string.IsNullOrWhiteSpace(name)) throw new ArgumentException("Missing device name.");
+        if (string.IsNullOrWhiteSpace(name)) throw new ArgumentException("Не указано имя устройства.");
         if (!IPAddress.TryParse(address, out var ip) || !ip.IsIPv6LinkLocal || port is < 1 or > 65535)
-            throw new ArgumentException("Invalid native AirDrop endpoint.");
+            throw new ArgumentException("Недопустимый адрес устройства AirDrop.");
         return new Device(name.Length > 100 ? name[..100] : name, ip.ToString().Split('%')[0], port);
     }
 }
@@ -37,9 +38,9 @@ sealed class Session
     public event Action<string>? SendStatus;
     public event Action<string>? ReceiveFailed;
     public readonly string Base = AppContext.BaseDirectory;
-    public readonly string Downloads = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads", "Windows AirDrop");
+    public readonly string Downloads = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads", "Пульсар");
     public string LogDirectory { get; private set; } = "";
-    public string Status { get; private set; } = "Ready to start";
+    public string Status { get; private set; } = "Готов к работе";
     public bool Running { get; private set; }
     public bool Working { get; private set; }
     public string Python { get; }
@@ -64,7 +65,7 @@ sealed class Session
     public int Generation => generation;
     string? senderError;
     bool sessionWriteFailed;
-    string startupStage = "setup";
+    string startupStage = "настройка";
     Task? activeScan;
 
     internal static bool TryAppendLog(string path, string text)
@@ -77,7 +78,7 @@ sealed class Session
     {
         if (sessionWriteFailed) return;
         sessionWriteFailed = true;
-        Log?.Invoke("Cannot write session files. Check free space and folder permissions; diagnostic logs may be incomplete.");
+        Log?.Invoke("Не удалось записать файлы сеанса. Проверьте свободное место и права на папку; диагностические журналы могут быть неполными.");
     }
 
     void Diagnostic(string kind, object detail)
@@ -104,8 +105,8 @@ sealed class Session
         try {
             await Task.WhenAny(readiness, exited, deadline);
             token.ThrowIfCancellationRequested();
-            if (child.HasExited) throw new IOException($"{stage}: helper exited with code {child.ExitCode}.");
-            if (!readiness.IsCompleted) throw new TimeoutException($"{stage}: readiness was not reported within {timeout.TotalSeconds:0} seconds.");
+            if (child.HasExited) throw new IOException($"{stage}: вспомогательный процесс завершился с кодом {child.ExitCode}.");
+            if (!readiness.IsCompleted) throw new TimeoutException($"{stage}: процесс не сообщил о готовности за {timeout.TotalSeconds:0} с.");
             await readiness;
         } finally { ended.Cancel(); }
     }
@@ -124,7 +125,7 @@ sealed class Session
         var path = new StringBuilder(32768);
         uint length = GetFinalPathNameByHandle(marker.SafeFileHandle, path, (uint)path.Capacity, 0);
         if (length == 0 || length >= path.Capacity)
-            throw new IOException("Cannot resolve the session log directory.", new System.ComponentModel.Win32Exception(Marshal.GetLastWin32Error()));
+            throw new IOException("Не удалось определить папку журналов сеанса.", new System.ComponentModel.Win32Exception(Marshal.GetLastWin32Error()));
         string resolved = path.ToString();
         if (resolved.StartsWith(@"\\?\UNC\")) resolved = @"\\" + resolved[8..];
         else if (resolved.StartsWith(@"\\?\")) resolved = resolved[4..];
@@ -137,7 +138,7 @@ sealed class Session
         Python = Path.GetFullPath(config["PythonExe"], Base);
         try
         {
-            var profile = JsonSerializer.Deserialize<Dictionary<string, string>>(File.ReadAllText(File.Exists(ProfileFile) ? ProfileFile : LegacyProfileFile))!;
+            var profile = JsonSerializer.Deserialize<Dictionary<string, string>>(File.ReadAllText(new[] { ProfileFile, LegacyPulseItProfileFile, LegacyProfileFile }.FirstOrDefault(File.Exists) ?? ProfileFile))!;
             Name = CleanName(profile["name"]);
             if (Models.Any(m => m.Model == profile["model"])) Model = profile["model"];
             CompatibleSending = profile.GetValueOrDefault("compatibleSending") == "true";
@@ -148,7 +149,7 @@ sealed class Session
 
     public static (string Address, string Sid) Identity(byte[] mac)
     {
-        if (mac.Length != 6 || (mac[0] & 1) != 0) throw new ArgumentException("awdl0 needs a unicast six-byte MAC.");
+        if (mac.Length != 6 || (mac[0] & 1) != 0) throw new ArgumentException("Для awdl0 нужен шестибайтовый индивидуальный MAC-адрес.");
         byte[] ip = [0xfe, 0x80, 0, 0, 0, 0, 0, 0, (byte)(mac[0] ^ 2), mac[1], mac[2], 0xff, 0xfe, mac[3], mac[4], mac[5]];
         return (new IPAddress(ip).ToString(), Convert.ToHexString(mac).ToLowerInvariant());
     }
@@ -185,18 +186,18 @@ sealed class Session
             if (line.Contains("state=Started error=Success")) { advertising = true; bluetoothReady?.TrySetResult(true); }
             if (line.Contains("error=ResourceInUse") || line.Contains("state=Aborted")) { advertising = false; bluetoothReady?.TrySetResult(false); }
         }
-        if (source == "receiver" && line.Contains(" receiving on [")) ready.TrySetResult();
+        if (source == "receiver" && line.Contains(" принимает на [")) ready.TrySetResult();
         if (source == "link" && line.StartsWith("service_port=")) linkReady.TrySetResult();
-        if (source == "receiver" && line.StartsWith("Saved transfer to ")) Saved?.Invoke(line["Saved transfer to ".Length..]);
+        if (source == "receiver" && line.StartsWith("Передача сохранена в ")) Saved?.Invoke(line["Передача сохранена в ".Length..]);
         if (source == "receiver") {
-            if (line.StartsWith("Could not save transfer")) ReceiveFailed?.Invoke("Windows could not save the file. Check free space and folder permissions.");
-            else if (line.StartsWith("Refused malformed transfer")) ReceiveFailed?.Invoke("The transfer was rejected. Check the logs for details.");
-            else if (line.StartsWith("Transfer connection failed")) ReceiveFailed?.Invoke("The transfer connection ended before completion.");
+            if (line.StartsWith("Не удалось сохранить передачу")) ReceiveFailed?.Invoke("Windows не удалось сохранить файл. Проверьте свободное место и права на папку.");
+            else if (line.StartsWith("Некорректная передача отклонена")) ReceiveFailed?.Invoke("Передача отклонена. Подробности в журналах.");
+            else if (line.StartsWith("Ошибка соединения передачи")) ReceiveFailed?.Invoke("Соединение прервано до завершения передачи.");
         }
         if (source == "sender") {
-            if (line.StartsWith("Preparing file")) SendStatus?.Invoke("Preparing file…");
-            else if (line.StartsWith("Waiting for the phone")) SendStatus?.Invoke("Connecting to iPhone. Keep it unlocked with Everyone enabled…");
-            else if (line.StartsWith("Requesting approval")) SendStatus?.Invoke("Accept the transfer on the iPhone.");
+            if (line.StartsWith("Подготовка файла")) SendStatus?.Invoke("Подготовка файла…");
+            else if (line.StartsWith("Ожидание телефона")) SendStatus?.Invoke("Подключение к iPhone. Оставьте его разблокированным с режимом «Для всех»…");
+            else if (line.StartsWith("Запрос подтверждения")) SendStatus?.Invoke("Подтвердите передачу на iPhone.");
         }
         if (line.StartsWith("{\"event\":"))
         {
@@ -223,7 +224,7 @@ sealed class Session
                         break;
                     case "send-trace" when source == "sender":
                         if (root.GetProperty("phase").GetString() == "http-body-written" && root.GetProperty("endpoint").GetString() == "/Upload")
-                            SendStatus?.Invoke("Finalizing on the iPhone…");
+                            SendStatus?.Invoke("Завершение передачи на iPhone…");
                         break;
                     case "send-error" when source == "sender":
                         string? message = root.GetProperty("message").GetString();
@@ -234,7 +235,7 @@ sealed class Session
                         break;
                 }
             }
-            catch (Exception e) when (e is JsonException or ArgumentException or KeyNotFoundException or InvalidOperationException or FormatException or OverflowException) { Log?.Invoke("Ignored an invalid helper message."); }
+            catch (Exception e) when (e is JsonException or ArgumentException or KeyNotFoundException or InvalidOperationException or FormatException or OverflowException) { Log?.Invoke("Некорректное сообщение вспомогательного процесса пропущено."); }
         }
         var friendly = FriendlyLine(source, line);
         if (friendly != null) Log?.Invoke(friendly);
@@ -245,26 +246,26 @@ sealed class Session
         if (source == "receiver" && line.StartsWith("{\"received\":")) {
             try {
                 using var json = JsonDocument.Parse(line);
-                return $"Received {json.RootElement.GetProperty("received").GetString()} ({json.RootElement.GetProperty("bytes").GetInt64():N0} bytes).";
-            } catch (Exception e) when (e is JsonException or KeyNotFoundException or InvalidOperationException) { return "Received a file. Open Received files to view it."; }
+                return $"Получено: {json.RootElement.GetProperty("received").GetString()} ({json.RootElement.GetProperty("bytes").GetInt64():N0} байт).";
+            } catch (Exception e) when (e is JsonException or KeyNotFoundException or InvalidOperationException) { return "Файл получен. Откройте «Полученные файлы»."; }
         }
-        if (source == "receiver" && line.Contains(" receiving on [")) return "Ready to receive from iPhone.";
-        if (source == "receiver" && line.Contains("POST /Ask") && line.Contains("200")) return "Incoming transfer accepted.";
-        if (source == "receiver" && line.Contains("POST /Ask") && line.Contains("403")) return "Incoming transfer declined.";
-        if (line.StartsWith("Refused malformed transfer")) return "Incoming transfer was rejected. See logs for details.";
-        if (source == "sender" && line.StartsWith("Requesting approval")) return "Accept the transfer on the receiving device.";
-        if (source == "discovery" && line.StartsWith("Discovery finished")) return line;
-        if (source == "link" && line.StartsWith("channel match reverted ")) return "Channel 36 didn't help, so the radio is back on 149 for this session.";
+        if (source == "receiver" && line.Contains(" принимает на [")) return "Готов к приёму файлов с iPhone.";
+        if (source == "receiver" && line.Contains("POST /Ask") && line.Contains("200")) return "Входящая передача принята.";
+        if (source == "receiver" && line.Contains("POST /Ask") && line.Contains("403")) return "Входящая передача отклонена.";
+        if (line.StartsWith("Некорректная передача отклонена")) return "Входящая передача отклонена. Подробности в журналах.";
+        if (source == "sender" && line.StartsWith("Запрос подтверждения")) return "Подтвердите передачу на принимающем устройстве.";
+        if (source == "discovery" && line.StartsWith("Поиск завершён")) return line;
+        if (source == "link" && line.StartsWith("channel match reverted ")) return "Канал 36 не помог; в этом сеансе адаптер вернулся на канал 149.";
         if (source == "link" && line.StartsWith("channel matched ")) {
             var to = line.Split(' ').ElementAtOrDefault(4);
-            return to == "149" ? "Radio back on channel 149 for discovery." : $"Radio moved to channel {to} to match the iPhone's Wi-Fi.";
+            return to == "149" ? "Для поиска устройств адаптер вернулся на канал 149." : $"Адаптер переключён на канал {to}, совпадающий с Wi-Fi iPhone.";
         }
-        if (line.Contains("state=Started error=Success")) return "Bluetooth wake-up is broadcasting.";
-        if (line.Contains("error=ResourceInUse")) return "Bluetooth wake-up is busy. Use recovery if the phone is missing.";
-        if (source == "recovery" && line.StartsWith("Restored")) return "Connected-device service restored.";
-        if (source == "recovery" && line.StartsWith("Bluetooth AirDrop advertising started")) return line;
-        if (source == "recovery" && line.StartsWith("Advertising still blocked")) return "Still blocked; switching Bluetooth off and on.";
-        if (line.StartsWith("Traceback")) return "An operation failed. Open logs for the full details.";
+        if (line.Contains("state=Started error=Success")) return "Сигнал обнаружения Bluetooth передаётся.";
+        if (line.Contains("error=ResourceInUse")) return "Объявление Bluetooth занято. Если iPhone не виден, запустите восстановление.";
+        if (source == "recovery" && line.StartsWith("Восстановлено")) return "Служба подключённых устройств восстановлена.";
+        if (source == "recovery" && line.StartsWith("Объявление AirDrop по Bluetooth запущено")) return line;
+        if (source == "recovery" && line.StartsWith("Объявление по-прежнему заблокировано")) return "Блокировка сохраняется; перезапускаем Bluetooth.";
+        if (line.StartsWith("Traceback")) return "Действие завершилось с ошибкой. Подробности в журналах.";
         return null;
     }
 
@@ -281,7 +282,7 @@ sealed class Session
         process.OutputDataReceived += (_, e) => { if (e.Data != null) ProcessHelperLine(source, e.Data, session); };
         process.ErrorDataReceived += (_, e) => { if (e.Data != null) ProcessHelperLine(source, e.Data, session); };
         process.Exited += (_, _) => { if (session == generation) Diagnostic("helper-exit", new { source, pid = process.Id, code = process.ExitCode }); };
-        if (critical) process.Exited += (_, _) => { if (Running && session == generation) _ = StopAsync("Session ended. Check the logs or start again."); };
+        if (critical) process.Exited += (_, _) => { if (Running && session == generation) _ = StopAsync("Сеанс завершён. Проверьте журналы или запустите его снова."); };
         process.Start(); process.BeginOutputReadLine(); process.BeginErrorReadLine();
         Diagnostic("helper-start", new { source, pid = process.Id, executable });
         lock (sync) owned.Add(process);
@@ -303,21 +304,22 @@ sealed class Session
     // AirDrop identity shown to Apple devices. ReceiverModelName picks the device icon they draw.
     public static readonly (string Label, string Model)[] Models =
         [("MacBook", "MacBookPro18,3"), ("iMac", "iMac21,1"), ("Mac mini", "Macmini9,1"), ("Mac Studio", "Mac13,1")];
-    public string Name { get; private set; } = "Windows PC";
-    public string ActiveName { get; private set; } = "Windows PC"; // the name the running receiver advertises
+    public string Name { get; private set; } = "Этот компьютер";
+    public string ActiveName { get; private set; } = "Этот компьютер"; // the name the running receiver advertises
     public string Model { get; private set; } = "MacBookPro18,3";
     // Unicast data (mostly TCP ACKs while receiving) goes out at 54 Mbit/s; at 12 Mbit/s the
     // ACKs took most of the phone's time on our channel. Compatible sending falls back to 12.
     public bool CompatibleSending { get; private set; }
     // Retune between 149 and 36 to follow where the phone actually spends its AWDL slots.
     public bool MatchChannel { get; private set; }
-    static string ProfileFile => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "PulseIt", "profile.json");
+    static string ProfileFile => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Pulsar", "profile.json");
     // Profile saved before the rename from PulseDrop; read until the first save under the new name.
+    static string LegacyPulseItProfileFile => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "PulseIt", "profile.json");
     static string LegacyProfileFile => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "PulseDrop", "profile.json");
-    public static string CleanName(string name) => new string(name.Where(c => !char.IsControl(c)).ToArray()).Trim() is var clean && clean.Length is >= 1 and <= 40 ? clean : throw new ArgumentException("Use 1 to 40 characters for the name.");
+    public static string CleanName(string name) => new string(name.Where(c => !char.IsControl(c)).ToArray()).Trim() is var clean && clean.Length is >= 1 and <= 40 ? clean : throw new ArgumentException("Имя должно содержать от 1 до 40 символов.");
     public void SaveProfile(string name, string model)
     {
-        if (!Models.Any(m => m.Model == model)) throw new ArgumentException("Unknown device icon.");
+        if (!Models.Any(m => m.Model == model)) throw new ArgumentException("Неизвестный значок устройства.");
         Name = CleanName(name); Model = model;
         Directory.CreateDirectory(Path.GetDirectoryName(ProfileFile)!);
         File.WriteAllText(ProfileFile, JsonSerializer.Serialize(new Dictionary<string, string> { ["name"] = Name, ["model"] = Model, ["compatibleSending"] = CompatibleSending ? "true" : "false", ["matchChannel"] = MatchChannel ? "true" : "false" }));
@@ -332,7 +334,7 @@ sealed class Session
 
     public void SetCompatibleSending(bool enabled)
     {
-        if (Running || Working) throw new InvalidOperationException("Stop receiving before changing the radio speed.");
+        if (Running || Working) throw new InvalidOperationException("Выключите приём перед изменением скорости адаптера.");
         bool previous = CompatibleSending;
         CompatibleSending = enabled;
         try { SaveProfile(Name, Model); }
@@ -341,83 +343,84 @@ sealed class Session
 
     public void SetMatchChannel(bool enabled)
     {
-        if (Running || Working) throw new InvalidOperationException("Stop receiving before changing radio settings.");
+        if (Running || Working) throw new InvalidOperationException("Выключите приём перед изменением настроек адаптера.");
         bool previous = MatchChannel;
         MatchChannel = enabled;
         try { SaveProfile(Name, Model); }
         catch { MatchChannel = previous; throw; }
     }
 
+    [SupportedOSPlatform("windows")]
     public async Task StartAsync()
     {
         await gate.WaitAsync();
         try
         {
             if (Running) return;
-            Working = true; SetStatus("Checking setup...");
+            Working = true; SetStatus("Проверка настройки…");
             cancel.Dispose(); cancel = new();
             lock (sync) { ++generation; candidates.Clear(); sessionWriteFailed = false; }
-            LogDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "PulseIt", "logs", DateTime.Now.ToString("yyyyMMdd-HHmmss") + "-" + Guid.NewGuid().ToString("N")[..6]);
+            LogDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Pulsar", "logs", DateTime.Now.ToString("yyyyMMdd-HHmmss") + "-" + Guid.NewGuid().ToString("N")[..6]);
             Directory.CreateDirectory(LogDirectory);
             LogDirectory = PhysicalDirectory(LogDirectory);
-            StartupStage("setup");
+            StartupStage("настройка");
             foreach (var file in new[] { Python, Engine("awdl_link.exe"), Engine("devourer-bridge.exe"), Engine("bleprobe\\bleprobe.exe"), Script("service.py") })
-                if (!File.Exists(file)) throw new IOException("Missing component: " + file);
+                if (!File.Exists(file)) throw new IOException("Отсутствует компонент: " + file);
             if (Process.GetProcessesByName("awdl_link").Length > 0 || Process.GetProcessesByName("devourer-bridge").Length > 0)
-                throw new IOException("Another AWDL radio session is active. Stop that session first.");
+                throw new IOException("Другой сеанс AWDL уже работает. Сначала остановите его.");
             var adapter = NetworkInterface.GetAllNetworkInterfaces().SingleOrDefault(n => n.Name.Equals("awdl0", StringComparison.OrdinalIgnoreCase))
-                ?? throw new IOException("awdl0 is missing. Complete the TAP adapter setup first.");
+                ?? throw new IOException("Интерфейс awdl0 не найден. Сначала настройте TAP-адаптер.");
             (Address, Sid) = Identity(adapter.GetPhysicalAddress().GetAddressBytes());
             IfIndex = adapter.GetIPProperties().GetIPv6Properties()!.Index;
             Diagnostic("session", new { version = typeof(Session).Assembly.GetName().Version?.ToString(), Address, IfIndex, MatchChannel, CompatibleSending, python = Python });
-            StartupStage("bridge pipe");
+            StartupStage("канал радиомоста");
             stopFile = Path.Combine(LogDirectory, "stop.request");
-            string pipe = @"\\.\pipe\pulseit-" + Guid.NewGuid().ToString("N");
+            string pipe = @"\\.\pipe\pulsar-" + Guid.NewGuid().ToString("N");
             ready = new(TaskCreationOptions.RunContinuationsAsynchronously);
             linkReady = new(TaskCreationOptions.RunContinuationsAsynchronously);
-            SetStatus("Starting the TP-Link adapter...");
+            SetStatus("Запуск адаптера TP-Link…");
             bridge = Launch(Engine("devourer-bridge.exe"), [pipe], "radio", true);
             bool available = false;
             for (int i = 0; i < 60; i++)
             {
                 cancel.Token.ThrowIfCancellationRequested();
-                if (bridge.HasExited) throw new IOException("The radio bridge could not start. Check its log.");
+                if (bridge.HasExited) throw new IOException("Не удалось запустить радиомост. Проверьте его журнал.");
                 if (WaitNamedPipe(pipe, 50)) { available = true; break; }
                 await Task.Delay(100, cancel.Token);
             }
-            if (!available) throw new IOException("The radio bridge did not become ready.");
-            StartupStage("radio initialization");
+            if (!available) throw new IOException("Радиомост не сообщил о готовности.");
+            StartupStage("инициализация радио");
             link = Launch(Engine("awdl_link.exe"), [pipe, "149", "3600", "--fixed", .. (MatchChannel ? new[] { "--match-channel" } : []), "--data-rate", CompatibleSending ? "12" : "54", "--tap", "awdl0", "--probe", "--service-port", "8771", "--stop-file", stopFile], "link", true);
             await AwaitReadyAsync(linkReady.Task, link, startupStage, TimeSpan.FromSeconds(55), cancel.Token);
-            StartupStage("TAP IPv6 address");
+            StartupStage("IPv6-адрес TAP");
             bool addressReady = false;
             for (int i = 0; i < 200; i++)
             {
                 cancel.Token.ThrowIfCancellationRequested();
-                if (link.HasExited) throw new IOException("Could not open the USB adapter. Make sure the TP-Link is plugged in and bound to WinUSB.");
+                if (link.HasExited) throw new IOException("Не удалось открыть USB-адаптер. Проверьте подключение TP-Link и драйвер WinUSB.");
                 adapter = NetworkInterface.GetAllNetworkInterfaces().Single(n => n.Name.Equals("awdl0", StringComparison.OrdinalIgnoreCase));
                 if (adapter.OperationalStatus == OperationalStatus.Up && adapter.GetIPProperties().UnicastAddresses.Any(a => a.Address.ToString().Split('%')[0] == Address && a.DuplicateAddressDetectionState == DuplicateAddressDetectionState.Preferred))
                 { addressReady = true; break; }
                 await Task.Delay(100, cancel.Token);
             }
-            if (!addressReady) throw new IOException("awdl0 did not obtain its IPv6 address.");
-            SetStatus("Starting the receiver...");
-            StartupStage("HTTPS receiver");
+            if (!addressReady) throw new IOException("Интерфейс awdl0 не получил IPv6-адрес.");
+            SetStatus("Запуск приёмника…");
+            StartupStage("HTTPS-приёмник");
             var receiver = this.receiver = Launch(Python, [.. PythonFlags, Script("service.py"), .. Common(), .. Profile(), "--seconds", "3600", "--ui-consent"], "receiver", true, input: true);
             await AwaitReadyAsync(ready.Task, receiver, startupStage, TimeSpan.FromSeconds(20), cancel.Token);
-            if (receiver.HasExited || link.HasExited || bridge.HasExited) throw new IOException("The session stopped during startup. Check the logs.");
+            if (receiver.HasExited || link.HasExited || bridge.HasExited) throw new IOException("Сеанс остановился во время запуска. Проверьте журналы.");
             Launch(Python, [.. PythonFlags, Script("announce.py"), .. Common(), "--seconds", "3600"], "announcer", true);
             StartupStage("ready");
             Running = true; Working = false;
             ActiveName = Name;
-            SetStatus("Receiving as " + Name);
-            Log?.Invoke("On iPhone: Share > AirDrop > " + Name + ". Approve incoming files on this PC.");
+            SetStatus("Приём под именем " + Name);
+            Log?.Invoke("На iPhone: Поделиться > AirDrop > " + Name + ". Подтверждайте входящие файлы на этом компьютере.");
         }
-        catch (OperationCanceledException) { await CleanupAsync(); SetStatus("Startup cancelled"); throw; }
+        catch (OperationCanceledException) { await CleanupAsync(); SetStatus("Запуск отменён"); throw; }
         catch (Exception error) {
             Diagnostic("startup-failed", new { stage = startupStage, error = error.ToString() });
-            await CleanupAsync(); SetStatus("Startup failed: " + startupStage);
-            throw new IOException($"Startup failed during {startupStage}: {error.Message} Logs: {LogDirectory}", error);
+            await CleanupAsync(); SetStatus("Ошибка запуска: " + startupStage);
+            throw new IOException($"Ошибка запуска на этапе «{startupStage}»: {error.Message} Журналы: {LogDirectory}", error);
         }
         finally { Working = false; Changed?.Invoke(); gate.Release(); }
     }
@@ -432,7 +435,7 @@ sealed class Session
     async Task CleanupAsync()
     {
         Running = false; Working = true; Changed?.Invoke();
-        if (stopFile.Length > 0) await File.WriteAllTextAsync(stopFile, "PulseIt requested shutdown");
+        if (stopFile.Length > 0) await File.WriteAllTextAsync(stopFile, "Пульсар запросил завершение работы");
         foreach (var p in new[] { link, bridge })
             if (p != null && !p.HasExited) { try { await p.WaitForExitAsync().WaitAsync(TimeSpan.FromSeconds(8)); } catch (TimeoutException) { p.Kill(true); } }
         Process[] children; lock (sync) children = owned.ToArray();
@@ -482,13 +485,13 @@ sealed class Session
 
     async Task ScanCoreAsync()
     {
-        if (!Running) throw new InvalidOperationException("Start receiving first.");
+        if (!Running) throw new InvalidOperationException("Сначала включите приём.");
         Scanning = true; Changed?.Invoke();
         try {
         lock (sync) WriteCandidates();
         List<string> args = [.. PythonFlags, Script("desktop_discover.py"), .. Common(), "--seconds", "30", "--candidates-file", Path.Combine(LogDirectory, "candidates.json")];
         var process = Launch(Python, args, "discovery");
-        if (await ExitAsync(process) != 0) throw new IOException("Device discovery failed. Check the logs.");
+        if (await ExitAsync(process) != 0) throw new IOException("Ошибка поиска устройств. Проверьте журналы.");
         Diagnostic("scan-complete", new { generation });
         } finally { Scanning = false; Changed?.Invoke(); }
     }
@@ -538,27 +541,27 @@ sealed class Session
     }
     public async Task WakeAsync()
     {
-        if (!Running) throw new InvalidOperationException("Start receiving first.");
+        if (!Running) throw new InvalidOperationException("Сначала включите приём.");
         await EnsureAdvertiserAsync();
         await ScanAsync();
     }
 
     public async Task SendAsync(Device device, string file, CancellationToken token = default)
     {
-        if (!Running) throw new InvalidOperationException("Start receiving first.");
+        if (!Running) throw new InvalidOperationException("Сначала включите приём.");
         Device.Validate(device.Name, device.Address, device.Port);
-        if (!File.Exists(file) || new FileInfo(file).Length > 1024L * 1024 * 1024) throw new IOException("Choose a file of 1 GiB or smaller.");
+        if (!File.Exists(file) || new FileInfo(file).Length > 1024L * 1024 * 1024) throw new IOException("Выберите файл размером до 1 ГиБ.");
         await EnsureAdvertiserAsync();
         token.ThrowIfCancellationRequested();
         senderError = null;
         var process = Launch(Python, [.. PythonFlags, Script("send.py"), file, "--peer", device.Address, "--port", device.Port.ToString(), .. Common(), .. Profile()], "sender");
-        if (await ExitAsync(process, token) != 0) throw new IOException(senderError ?? "The transfer failed. Open the logs for details.");
-        Log?.Invoke("Upload accepted by " + device.Name + ". Confirm the file opens on the phone.");
+        if (await ExitAsync(process, token) != 0) throw new IOException(senderError ?? "Передача завершилась с ошибкой. Подробности в журналах.");
+        Log?.Invoke("Файл принят устройством " + device.Name + ". Проверьте, открывается ли он на телефоне.");
     }
 
     public Task RecoverAsync()
     {
-        if (!Running) throw new InvalidOperationException("Start receiving first.");
+        if (!Running) throw new InvalidOperationException("Сначала включите приём.");
         return recovery = RecoverCoreAsync();
     }
     async Task RecoverCoreAsync()
@@ -575,28 +578,28 @@ sealed class Session
         {
             // Its finally block restores services; a hang there needs the user to check them.
             process.Kill(true);
-            throw new IOException("Bluetooth recovery did not finish within 2 minutes. Check recovery.log and the Bluetooth and Connected Devices services.");
+            throw new IOException("Восстановление Bluetooth не завершилось за 2 минуты. Проверьте recovery.log и службы Bluetooth и подключённых устройств.");
         }
         string log = Path.Combine(LogDirectory, "recovery.log");
         if (File.Exists(log)) foreach (var line in File.ReadAllLines(log)) {
             var friendly = FriendlyLine("recovery", line);
             if (friendly != null) Log?.Invoke(friendly);
         }
-        if (process.ExitCode != 0) throw new IOException("Bluetooth recovery failed. Check recovery.log for service restoration status.");
+        if (process.ExitCode != 0) throw new IOException("Не удалось восстановить Bluetooth. Состояние восстановления служб указано в recovery.log.");
         using var result = JsonDocument.Parse(File.ReadAllText(Path.Combine(LogDirectory, "recovery-result.json")));
-        if (!result.RootElement.GetProperty("services_restored").GetBoolean()) throw new IOException("Bluetooth services were not restored.");
+        if (!result.RootElement.GetProperty("services_restored").GetBoolean()) throw new IOException("Службы Bluetooth не восстановлены.");
         int pid = result.RootElement.GetProperty("publisher_pid").GetInt32();
         var child = Process.GetProcessById(pid);
         if (!string.Equals(child.MainModule?.FileName, Engine("bleprobe\\bleprobe.exe"), StringComparison.OrdinalIgnoreCase)) {
             child.Dispose();
-            throw new IOException("Recovery returned an unexpected process.");
+            throw new IOException("Восстановление вернуло неожиданный процесс.");
         }
         bool adopted = false;
         try {
             string statusPath = result.RootElement.GetProperty("publisher_log").GetString()!;
             if (!string.Equals(Path.GetDirectoryName(Path.GetFullPath(statusPath)), Path.GetFullPath(LogDirectory), StringComparison.OrdinalIgnoreCase)
                 || !Path.GetFileName(statusPath).StartsWith("recovery-bluetooth", StringComparison.Ordinal)
-                || !PublisherLogStarted(statusPath)) throw new IOException("Recovery publisher no longer reports Started. Check its logs.");
+                || !PublisherLogStarted(statusPath)) throw new IOException("Процесс объявления Bluetooth больше не сообщает о запуске. Проверьте его журналы.");
             lock (sync) {
                 if (Running) { advertiser = child; advertising = true; publisherStatusLog = statusPath; owned.Add(child); adopted = true; }
             }

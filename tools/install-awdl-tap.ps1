@@ -1,7 +1,9 @@
-# Installs only the prepared, signature-checked TAP driver and one awdl0 adapter.
+﻿# Installs only the prepared, signature-checked TAP driver and one awdl0 adapter.
 # Run without -Install to validate the package without changing Windows.
 param([switch]$Install, [string]$Package)
 $ErrorActionPreference = 'Stop'
+[Console]::OutputEncoding = [System.Text.UTF8Encoding]::new($false)
+$OutputEncoding = [Console]::OutputEncoding
 $tapPackage = if ($Package) { $Package } else { Join-Path $PSScriptRoot '..\..\deps\tap-9.27.0\dist.win10\amd64' }
 $tapPackage = (Resolve-Path -LiteralPath $tapPackage).Path
 $expected = @{
@@ -13,28 +15,28 @@ $expected = @{
 foreach ($tapFile in $expected.Keys) {
     $tapPath = Join-Path $tapPackage $tapFile
     if ((Get-FileHash -LiteralPath $tapPath -Algorithm SHA256).Hash -ne $expected[$tapFile]) {
-        throw "Package file changed: $tapFile"
+        throw "Файл пакета изменён: $tapFile"
     }
 }
 foreach ($tapFile in @('tap0901.cat', 'devcon.exe')) {
     $tapSignature = Get-AuthenticodeSignature -LiteralPath (Join-Path $tapPackage $tapFile)
     if ($tapSignature.Status -ne 'Valid' -or $tapSignature.SignerCertificate.Subject -notmatch 'O=Microsoft Corporation') {
-        throw "Microsoft signature verification failed: $tapFile"
+        throw "Подпись Microsoft не прошла проверку: $tapFile"
     }
 }
-Write-Output 'Prepared TAP-Windows6 9.27.0 amd64 package verified.'
-if (-not $Install) { Write-Output 'Validation only. Use -Install in an administrator PowerShell after approval.'; return }
+Write-Output 'Подготовленный пакет TAP-Windows6 9.27.0 amd64 проверен.'
+if (-not $Install) { Write-Output 'Выполнена только проверка. Для установки используйте -Install в PowerShell с правами администратора.'; return }
 $tapIdentity = [Security.Principal.WindowsIdentity]::GetCurrent()
 if (-not ([Security.Principal.WindowsPrincipal]$tapIdentity).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
-    throw 'Run this script in an administrator PowerShell.'
+    throw 'Запустите скрипт в PowerShell с правами администратора.'
 }
-if (Get-NetAdapter -Name awdl0 -ErrorAction SilentlyContinue) { throw 'awdl0 already exists; no changes made.' }
+if (Get-NetAdapter -Name awdl0 -ErrorAction SilentlyContinue) { throw 'awdl0 уже существует; изменения не внесены.' }
 $tapBefore = @(Get-NetAdapter -IncludeHidden | Select-Object -ExpandProperty InterfaceGuid)
 Push-Location -LiteralPath $tapPackage
 try {
     & .\devcon.exe install OemVista.inf tap0901
     $tapExit = $LASTEXITCODE
-    if ($tapExit -notin @(0,1)) { throw "devcon failed: $tapExit" }
+    if ($tapExit -notin @(0,1)) { throw "Ошибка devcon: $tapExit" }
 } finally { Pop-Location }
 $tapNew = @()
 for ($tapAttempt = 0; $tapAttempt -lt 20; $tapAttempt++) {
@@ -44,7 +46,7 @@ for ($tapAttempt = 0; $tapAttempt -lt 20; $tapAttempt++) {
     if ($tapNew.Count -eq 1) { break }
     Start-Sleep -Milliseconds 500
 }
-if ($tapNew.Count -ne 1) { throw 'Could not uniquely identify the new TAP adapter; inspect Device Manager.' }
+if ($tapNew.Count -ne 1) { throw 'Не удалось однозначно определить новый TAP-адаптер; проверьте Диспетчер устройств.' }
 $tapNew[0] | Rename-NetAdapter -NewName awdl0
 Get-NetAdapter -Name awdl0 | Select-Object Name, InterfaceDescription, InterfaceGuid, ifIndex, Status
-if ($tapExit -eq 1) { Write-Output 'Windows reported that a reboot may be required.' }
+if ($tapExit -eq 1) { Write-Output 'Windows сообщила, что может потребоваться перезагрузка.' }

@@ -1,18 +1,20 @@
-param([string]$Destination = (Join-Path $PSScriptRoot '..\..\PulseIt'), [switch]$NoShortcuts)
+﻿param([string]$Destination = (Join-Path $PSScriptRoot '..\..\Pulsar'), [switch]$NoShortcuts)
 $ErrorActionPreference = 'Stop'
-# PulseIt runs elevated, so the bundle and its Python runtime are locked to administrators (see the end).
+[Console]::OutputEncoding = [System.Text.UTF8Encoding]::new($false)
+$OutputEncoding = [Console]::OutputEncoding
+# Pulsar runs elevated, so the bundle and its Python runtime are locked to administrators (see the end).
 $awdlAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
-if (-not $awdlAdmin) { throw 'Run packaging as administrator: the bundle is locked against changes by non-admin processes.' }
+if (-not $awdlAdmin) { throw 'Запустите упаковку с правами администратора: комплект будет защищён от записи обычными процессами.' }
 $awdlRepo = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 $awdlDeps = (Resolve-Path (Join-Path $awdlRepo '..\deps')).Path
 $awdlPython = Join-Path $awdlDeps 'airdrop-venv\Scripts\python.exe'
-if (-not (Test-Path -LiteralPath $awdlPython)) { throw 'Create the tested deps/airdrop-venv first.' }
-foreach ($awdlName in @('PulseIt','awdl_link','devourer-bridge')) {
-    if (Get-Process -Name $awdlName -ErrorAction SilentlyContinue) { throw "Close $awdlName before packaging; no running app will be overwritten." }
+if (-not (Test-Path -LiteralPath $awdlPython)) { throw 'Сначала создайте проверенное окружение deps/airdrop-venv.' }
+foreach ($awdlName in @('Pulsar','awdl_link','devourer-bridge')) {
+    if (Get-Process -Name $awdlName -ErrorAction SilentlyContinue) { throw "Закройте $awdlName перед упаковкой; работающее приложение не будет перезаписано." }
 }
 New-Item -ItemType Directory -Path $Destination -Force | Out-Null
-dotnet publish (Join-Path $awdlRepo 'desktop\PulseIt.csproj') -c Release --self-contained false -o $Destination --verbosity quiet
-if ($LASTEXITCODE) { throw 'Desktop build failed.' }
+dotnet publish (Join-Path $awdlRepo 'desktop\Pulsar.csproj') -c Release --self-contained false -o $Destination --verbosity quiet
+if ($LASTEXITCODE) { throw 'Не удалось собрать приложение.' }
 $awdlEngine = Join-Path $Destination 'engine'
 New-Item -ItemType Directory -Path $awdlEngine -Force | Out-Null
 Copy-Item -LiteralPath (Join-Path $awdlRepo 'build\awdl_link.exe') -Destination $awdlEngine
@@ -22,7 +24,7 @@ foreach ($awdlDll in @('libgcc_s_seh-1.dll','libstdc++-6.dll','libwinpthread-1.d
     Copy-Item -LiteralPath (Join-Path $awdlMingw $awdlDll) -Destination $awdlEngine
 }
 dotnet publish (Join-Path $awdlRepo 'tools\bleprobe\bleprobe.csproj') -c Release --self-contained false -o (Join-Path $awdlEngine 'bleprobe') --verbosity quiet
-if ($LASTEXITCODE) { throw 'Bluetooth helper build failed.' }
+if ($LASTEXITCODE) { throw 'Не удалось собрать помощник Bluetooth.' }
 $awdlScripts = Join-Path $Destination 'airdrop'
 New-Item -ItemType Directory -Path $awdlScripts -Force | Out-Null
 Get-ChildItem -LiteralPath (Join-Path $awdlRepo 'airdrop') -File | Copy-Item -Destination $awdlScripts
@@ -39,42 +41,43 @@ foreach ($awdlLicenseName in @('COPYING3','COPYING3.LIB','COPYING.RUNTIME')) {
 Copy-Item -LiteralPath (Join-Path $awdlMingw '..\licenses\winpthreads\COPYING') -Destination (Join-Path $awdlLicenses 'winpthreads.txt')
 @{ PythonExe = $awdlPython } | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $Destination 'settings.json') -Encoding UTF8
 @"
-PulseIt - quick local setup
+Пульсар — локальная настройка
 
-1. Plug in the tested TP-Link Archer T3U (2357:012D, already using WinUSB).
-2. Open PulseIt.exe and accept the Windows administrator prompt.
-3. Click Start receiving. On iPhone choose Share > AirDrop > Windows PC.
-4. Approve incoming files on this PC. Received files opens your Downloads folder.
-5. To send: unlock iPhone, refresh Everyone for 10 Minutes, Find devices,
-   Choose file, Send to device. Accept on the phone.
-6. If discovery cannot wake the phone, Bluetooth recovery is an explicit,
-   temporary operation that disconnects Bluetooth accessories and restores services.
+1. Подключите поддерживаемый TP-Link Archer T3U (2357:012D) с WinUSB.
+2. Откройте Pulsar.exe и подтвердите запрос администратора Windows.
+3. Включите приём. На iPhone выберите Поделиться > AirDrop > Этот компьютер.
+4. Подтвердите запрос на ПК. «Полученные файлы» открывает папку загрузок.
+5. Для отправки разблокируйте iPhone и включите «Для всех на 10 минут».
+   Обновите список устройств, выберите файл и нажмите «Отправить».
+6. Если телефон не обнаружен, восстановление Bluetooth запускается явно.
+   Оно может ненадолго отключить аксессуары и восстанавливает службы.
 
-This local bundle uses the existing TAP driver, scoped firewall rules,
-Python runtime at $awdlPython, and .NET Desktop Runtime 8 already installed
-on this PC. It is not a portable installer for another PC. Keep the Python
-runtime and this folder in place. Sessions last up to one hour; Stop or close
-the window to release the adapter. Maximum one file of 1 GiB per send.
+Комплект использует существующий TAP, ограниченные правила брандмауэра,
+Python по адресу $awdlPython и установленную среду .NET Desktop Runtime 8.
+Это локальный комплект для этого ПК. Сохраняйте Python и каталог программы.
+Сеанс длится до часа; выключите приём или закройте окно для освобождения
+адаптера. За одну отправку передаётся один файл до 1 ГиБ.
 
-No driver rebinding, driver installation, or firewall changes are performed.
-The native link and devourer bridge stay separate executables. Dependencies
-and source workspace: $awdlRepo
-This is a local development bundle; public distribution still needs the
-corresponding source/license packaging and signing review.
+Упаковка не устанавливает драйверы, не меняет их привязку и брандмауэр.
+Движок AWDL и радиомост devourer остаются отдельными программами.
+Исходники и зависимости: $awdlRepo
+Публичный выпуск требует проверки соответствующих исходников, лицензий
+и подписей.
 
-Remove the desktop/Start menu shortcuts and this folder to remove the UI.
-That leaves existing drivers, received files and logs untouched.
+Удаление ярлыков и этой папки удаляет интерфейс. Существующие драйверы,
+полученные файлы и журналы сохраняются.
+
 "@ | Set-Content -LiteralPath (Join-Path $Destination 'READ-ME.txt') -Encoding UTF8
 if (-not $NoShortcuts) {
     $awdlShell = New-Object -ComObject WScript.Shell
     foreach ($awdlShortcutPath in @(
-        (Join-Path ([Environment]::GetFolderPath('Desktop')) 'PulseIt.lnk'),
-        (Join-Path ([Environment]::GetFolderPath('Programs')) 'PulseIt.lnk')
+        (Join-Path ([Environment]::GetFolderPath('Desktop')) 'Пульсар.lnk'),
+        (Join-Path ([Environment]::GetFolderPath('Programs')) 'Пульсар.lnk')
     )) {
         $awdlShortcut = $awdlShell.CreateShortcut($awdlShortcutPath)
-        $awdlShortcut.TargetPath = Join-Path $Destination 'PulseIt.exe'
+        $awdlShortcut.TargetPath = Join-Path $Destination 'Pulsar.exe'
         $awdlShortcut.WorkingDirectory = $Destination
-        $awdlShortcut.Description = 'Native iPhone AirDrop with the TP-Link adapter'
+        $awdlShortcut.Description = 'AirDrop между iPhone и Windows через адаптер TP-Link'
         $awdlShortcut.Save()
     }
 }
@@ -83,7 +86,7 @@ if (-not $NoShortcuts) {
 foreach ($awdlLocked in @($Destination, (Split-Path (Split-Path $awdlPython)))) {
     icacls $awdlLocked /setowner '*S-1-5-32-544' /T /C /Q | Out-Null
     icacls $awdlLocked /inheritance:r /grant:r '*S-1-5-32-544:(OI)(CI)F' '*S-1-5-18:(OI)(CI)F' '*S-1-5-32-545:(OI)(CI)RX' /C /Q | Out-Null
-    if ($LASTEXITCODE) { throw "Could not lock $awdlLocked" }
+    if ($LASTEXITCODE) { throw "Не удалось защитить $awdlLocked" }
     icacls (Join-Path $awdlLocked '*') /reset /T /C /Q | Out-Null
 }
-Write-Output "Ready: $Destination\PulseIt.exe"
+Write-Output "Готово: $Destination\Pulsar.exe"

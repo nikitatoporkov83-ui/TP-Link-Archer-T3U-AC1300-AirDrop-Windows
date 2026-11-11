@@ -1,116 +1,90 @@
-<p align="center">
-  <img src="assets/readme/hero.svg" alt="PulseIt — send files between your iPhone and Windows PC. Developer preview; supported USB adapter required." width="100%">
-</p>
+<p align="center"><img src="assets/readme/hero.svg" alt="Пульсар — обмен файлами между iPhone и Windows через AirDrop" width="100%"></p>
 
-<p align="center">
-  <a href="#what-you-need">What you need</a> ·
-  <a href="#get-started">Get started</a> ·
-  <a href="#send-a-file">Send a file</a> ·
-  <a href="#need-help">Need help?</a> ·
-  <a href="docs/build.md">Build from source</a>
-</p>
+# Пульсар
 
-**PulseIt lets a Windows PC exchange files with a nearby iPhone using AirDrop. No iPhone app is needed.**
+**Обмен файлами между iPhone и Windows через AirDrop. Дополнительное приложение на iPhone не требуется.**
 
-> **Developer preview:** this needs a specific USB Wi-Fi adapter and administrator setup. It does not work with your PC's built-in Wi-Fi alone. iPhone-to-PC transfers were measured repeatedly on the current build (an 80 MB file in about 14–20 seconds); PC-to-iPhone was last verified on an earlier build. [Current limits →](docs/limitations.md)
+«Пульсар» — русская адаптация [PulseIt](https://github.com/gsl0001/windows-airdrop). Интерфейс, установщик и инструкции переведены на русский. Технические имена файлов программы используют `Pulsar`.
 
-## What you need
+Это экспериментальная версия для разработки. Нужны конкретный USB-адаптер и первоначальная настройка с правами администратора. [Ограничения и результаты автора исходного проекта](docs/limitations.md) не являются результатами аппаратных испытаний этой адаптации.
 
-| On your Windows PC | On your iPhone |
+## Что потребуется
+
+| На компьютере | На iPhone |
 | --- | --- |
-| Windows x64; tested on Windows 11 | A nearby, unlocked iPhone |
-| **TP-Link Archer T3U — USB ID `2357:012d`** | AirDrop: **Everyone for 10 Minutes** |
-| Working Bluetooth | No extra app |
-| Administrator access for driver setup | Accept incoming files when asked |
+| Windows x64; исходный проект проверялся на Windows 11 | Устройство рядом, экран разблокирован |
+| **TP-Link Archer T3U с USB ID `2357:012d`** | AirDrop: **«Для всех на 10 минут»** |
+| Работающий Bluetooth | Дополнительное приложение не нужно |
+| Права администратора для настройки драйверов | Подтверждение входящих файлов |
 
-**Check the USB ID, not just the adapter name.** Other hardware revisions are not qualified. Setup also installs/configures a virtual network adapter. The dedicated TP-Link adapter cannot provide normal Wi-Fi while configured for PulseIt, so keep another internet connection available.
+Проверьте USB ID в Диспетчере устройств: одно название Archer T3U не подтверждает аппаратную ревизию. Пока адаптер работает с WinUSB для Пульсар, обычный Wi-Fi через него недоступен. Сохраните другой способ подключения к интернету. Установщик также настраивает виртуальный сетевой адаптер.
 
-## Get started
+## Начало работы
 
-1. **Build the development setup.** Follow the [Windows build guide](docs/build.md). There is no qualified public installer attached to this source snapshot. A local installer is a developer test build, not a general release.
-2. **Configure the supported adapter.** Plug it in, run setup and approve the administrator prompt. Choose adapter configuration only after checking the USB ID. Close PulseIt before changing drivers.
-3. **Open PulseIt.** Turn receiving on, then follow the three steps below.
+1. Соберите тестовую версию по [инструкции для Windows](docs/build.md). Проверенного публичного установщика у этой адаптации пока нет.
+2. Подключите поддерживаемый адаптер. Закройте Пульсар перед изменением драйверов. В установщике выберите настройку устройств и подтвердите запрос администратора.
+3. Откройте **Пульсар** и включите приём.
 
-<img src="assets/readme/quick-start.svg" alt="Receive in three steps: 1. Plug in the supported TP-Link adapter. 2. Open the configured PulseIt app and start receiving. 3. On iPhone choose Share, AirDrop, Windows PC; approve on Windows." width="100%">
+<img src="assets/readme/quick-start.svg" alt="Подключите адаптер, включите приём и отправьте файл с iPhone" width="100%">
 
-### iPhone → PC
+### С iPhone на компьютер
 
-1. On the iPhone, open a photo, video or file.
-2. Tap **Share → AirDrop → Windows PC** (or the name you set in PulseIt).
-3. **Accept** the request on Windows. Wait for completion, then use **Received files** to open the saved folder.
+1. Откройте фотографию, видео или файл на iPhone.
+2. Нажмите **Поделиться → AirDrop → Этот компьютер** или имя, заданное в Пульсар.
+3. Нажмите **«Принять»** на компьютере и дождитесь завершения.
+4. Откройте **«Полученные файлы»**. Кнопка файла показывает его в Проводнике.
 
-### PC → iPhone
+### С компьютера на iPhone
 
-1. Unlock the iPhone and refresh **AirDrop → Everyone for 10 Minutes**.
-2. In PulseIt, open **Send** and refresh the device list.
-3. Choose a file, select the iPhone and press **Send**.
-4. **Accept** on the iPhone and wait for completion.
+1. Разблокируйте iPhone и включите **AirDrop → «Для всех на 10 минут»**.
+2. Откройте вкладку **«Отправить»** в Пульсар и обновите список устройств.
+3. Выберите один файл и нажмите **«Отправить»** рядом с iPhone.
+4. Подтвердите передачу на iPhone и дождитесь завершения.
 
-Keep the phone nearby and unlocked. The app limit is **1 GiB** per transfer; large videos may take several minutes. Keep channel matching off for the baseline setup. Turn on **Compatible sending (12 Mbit/s)** in the gear menu only if transfers become unreliable.
+Размер одного файла — до **1 ГиБ**. Держите устройства рядом и не выключайте приём во время передачи. Базовый режим использует фиксированный канал 149. **«Совместимая отправка (12 Мбит/с)»** снижает скорость и предназначена для проверки нестабильного соединения; автоматический выбор канала оставьте выключенным при первоначальной проверке.
 
-## Inside the app
+## Интерфейс
 
-These are real UI renders with **synthetic demo data**, not proof of a live connection or transfer.
+Иллюстрации показывают русскую версию интерфейса с вымышленными данными. Они не подтверждают обнаружение настоящего устройства или успешную передачу.
 
-<table>
-  <tr>
-    <td align="center"><strong>Find a device and send</strong><br><img src="assets/readme/send-demo.png" alt="Demo of the PulseIt Send screen with a sample iPhone device" width="360"></td>
-    <td align="center"><strong>Turn receiving on</strong><br><img src="assets/readme/receive-demo.png" alt="Demo of the PulseIt Receive screen" width="360"></td>
-  </tr>
-</table>
+<table><tr><td align="center"><strong>Отправка файла</strong><br><img src="assets/readme/send-demo.png" alt="Иллюстрация вкладки Отправить в Пульсар" width="360"></td><td align="center"><strong>Получение файлов</strong><br><img src="assets/readme/receive-demo.png" alt="Иллюстрация вкладки Получить в Пульсар" width="360"></td></tr></table>
 
-## Need help?
+## Если что-то не работает
 
-| What you see | What to try |
+| Проблема | Что проверить |
 | --- | --- |
-| iPhone missing | Unlock it, refresh Everyone for 10 Minutes, then refresh PulseIt. |
-| Windows PC missing on iPhone | Check that receiving is on and the supported USB adapter is plugged in. Reopen the AirDrop sheet. |
-| Bluetooth recovery offered | It may briefly disconnect Bluetooth accessories. Use it only when you can tolerate that interruption. |
-| Transfer paused | Keep both devices nearby and unlocked. Large files can pause; don't stop receiving while a transfer is active. |
-| Transfer failed | Cancel the attempt, refresh the phone's Everyone window and device list, then retry. Avoid experimental speed settings. |
-| Need normal Wi-Fi on the TP-Link again | Close PulseIt, then use **Restore USB Wi-Fi driver** from the Start menu. Restoration still needs clean-PC qualification. |
+| iPhone не появился | Разблокируйте его, обновите режим «Для всех на 10 минут» и список в Пульсар. |
+| Компьютера нет в AirDrop на iPhone | Включите приём, проверьте подключение адаптера и заново откройте меню AirDrop. |
+| Предлагается восстановление Bluetooth | Оно может ненадолго отключить аксессуары. Запускайте, когда такое прерывание допустимо. |
+| Передача приостановилась | Оставьте устройства рядом и разблокированными. Большие файлы могут передаваться с паузами. |
+| Передача завершилась с ошибкой | Отмените попытку, обновите режим «Для всех» и список устройств, затем повторите. |
+| Нужно вернуть обычный Wi-Fi | Закройте Пульсар и выберите **«Восстановить драйвер Wi-Fi»** в меню «Пуск». Восстановление на чистом ПК ещё требует проверки. |
 
-For a bug report, include the revision, adapter USB ID, direction, file size and what appeared on both devices. **Review and redact diagnostic exports before sharing:** they can contain names, addresses, file names and paths. Never post keys, captures or personal files.
+В отчёте об ошибке укажите версию, USB ID, направление передачи, размер файла и результат на обоих устройствах. Экспорт диагностики может содержать имена, адреса и пути к файлам: просмотрите и обезличьте его перед публикацией. Не публикуйте ключи, личные файлы и необработанные записи трафика.
 
-## How fast is it?
+## Скорость и состояние проекта
 
-Receiving an **80 MB file from an iPhone takes about 14–20 seconds (roughly 4–6 MB/s)**, down from about two minutes in 0.2.7. A Mac receives the same file in under 5 seconds, so there is still a gap. What changed:
+Автор исходного PulseIt сообщил о повторной передаче 80 МБ с iPhone за 14–20 секунд, примерно 4–6 МБ/с. Эти значения зависят от устройства, его подключения к Wi-Fi и выделяемого AirDrop эфирного времени; они не гарантируют скорость Пульсар. Приём использует полосу 80 МГц, упорядочивание Block Ack, подтверждения 54 Мбит/с и сокращённое ожидание завершения загрузки. Параметры `--width20` и `--no-rx-aggregation` возвращают прежние режимы для диагностики.
 
-- **80 MHz receive.** On channels 149, 36 and 44 the radio now listens at 80 MHz and the link advertises VHT, so the phone sends at its fastest rates. Start the bridge with `--width20` to go back to 20 MHz.
-- **Block Ack reordering.** Aggregated frames the phone retransmits are put back in order before TCP sees them, instead of triggering slow recovery. It is on by default; start the link with `--no-rx-aggregation` to turn it off.
-- **Cheaper replies.** Our TCP acknowledgements go out at 54 Mbit/s instead of 12, and back-to-back acknowledgements are merged (at most one per queued frame), so they use less of the phone's airtime.
-- **Faster finish.** The receiver recognises the end of the upload after a quarter-second pause instead of waiting for a final chunk the iPhone never sends.
-- **Quiet radio logging** by default, so per-frame logging no longer stalls the bridge.
+В более ранних сборках источника работала отправка на iPhone, включая видео 135,6 МБ. Исправление запуска 0.2.7 прошло десять циклов включения и выключения адаптера. Отправку текущей версии, длительную работу, совместную работу Bluetooth, установку на чистый ПК и восстановление драйвера нужно проверять отдельно. **Режим «Только для контактов» не поддерживается.** Проверка учётной записи Apple не реализована.
 
-Speed depends heavily on the phone. When the iPhone is connected to a Wi-Fi network on another channel, it gives AirDrop fewer of its time slots and transfers slow down; the phone gives AirDrop the most time when it is not connected to another Wi-Fi network. Sending from the PC has not been re-measured since these changes.
+Сборка Пульсар **не подписана**. У адаптации нет подтверждённого участия в SignPath. Исторические сведения о заявке автора PulseIt относятся к исходному проекту.
 
-## What works — and what still needs testing
+## Разработка
 
-iPhone-to-PC transfers work on the current build and were measured repeatedly with an 80 MB file. Earlier builds also completed PC-to-iPhone transfers, including a **135.6 MB outgoing video**. The 0.2.7 startup fix passed ten adapter start/stop cycles. Current-build PC-to-iPhone transfer, Bluetooth coexistence, clean-PC install/restoration and sustained reliability remain open. **Contacts Only is unsupported.** This is not Apple-account identity verification.
-
-[Detailed limitations](docs/limitations.md) · [Architecture](docs/architecture.md) · [Contributing](CONTRIBUTING.md) · [Security reporting](SECURITY.md) · [Privacy](PRIVACY.md) · [Code signing policy](CODE-SIGNING.md)
-
-Signing status: **unsigned**. The SignPath Foundation application was submitted on October 18, 2026; review is pending. No approval or signed release is claimed.
-
-<details>
-<summary><strong>For developers: source layout and licensing</strong></summary>
-
-| Folder | Purpose |
+| Каталог | Назначение |
 | --- | --- |
-| `desktop/` | Windows UI and helper lifecycle |
-| `airdrop/` | HTTPS discovery, consent and file streaming |
-| `sched/`, `compat/`, `netif/` | OWL scheduling and virtual network interface |
-| `radio/` | Separate USB radio bridge and pipe transport |
-| `tools/`, `installer/` | Builds and explicit device configuration |
-| `assets/`, `tests/`, `patches/` | Branding, regression tests and upstream changes |
+| `desktop/` | Интерфейс Windows и управление процессами |
+| `airdrop/` | Обнаружение по HTTPS, подтверждение и потоковая передача файлов |
+| `sched/`, `compat/`, `netif/` | Планировщик OWL и виртуальная сеть |
+| `radio/` | Отдельный USB-радиомост и транспорт именованного канала |
+| `tools/`, `installer/` | Сборка и настройка устройств |
+| `assets/`, `tests/`, `patches/` | Графика, тесты и исправления исходных компонентов |
 
-Source defaults to GPL-3.0-or-later with GPL-2.0-only and MIT exceptions. See [LICENSE](LICENSE) and [third-party notices](THIRD_PARTY_NOTICES.md). OWL and devourer remain separate executables. Preserve applicable source/notices when distributing binaries.
+[Сборка на Windows](docs/build.md) · [Облачная среда Linux](docs/cloud-environment.md) · [Происхождение кода](docs/upstream-import.md) · [Архитектура](docs/architecture.md) · [Участие в разработке](CONTRIBUTING.md)
 
-</details>
+По умолчанию исходники распространяются по GPL-3.0-or-later; отдельные части имеют GPL-2.0-only и MIT. [Карта лицензий](LICENSE) и [уведомления об авторах](THIRD_PARTY_NOTICES.md) сохранены. OWL и devourer остаются отдельными процессами.
 
-PulseIt is independent of Apple, TP-Link, OpenIPC and the OWL authors. Product names belong to their respective owners.
+[Сообщить об уязвимости](SECURITY.md) · [Конфиденциальность](PRIVACY.md) · [Подпись сборок](CODE-SIGNING.md)
 
-## Этот репозиторий
-
-Копия исходников PulseIt для проекта TP-Link Archer T3U / AirDrop Windows.
-[Источник и версия](docs/upstream-import.md) · [Облачная среда](docs/cloud-environment.md).
+Независимый проект, не связанный с Apple, TP-Link, OpenIPC и авторами OWL. Названия сторонних продуктов принадлежат их владельцам.

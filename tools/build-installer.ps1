@@ -1,8 +1,10 @@
-param(
+﻿param(
     [string]$Deps = (Join-Path $PSScriptRoot '..\..\deps'),
     [string]$MingwRoot = (Join-Path $env:USERPROFILE 'scoop\apps\mingw\current')
 )
 $ErrorActionPreference = 'Stop'
+[Console]::OutputEncoding = [System.Text.UTF8Encoding]::new($false)
+$OutputEncoding = [Console]::OutputEncoding
 $repo = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 $Deps = (Resolve-Path $Deps).Path
 $downloads = Join-Path $Deps 'setup-downloads'
@@ -13,19 +15,19 @@ New-Item -ItemType Directory $downloads,$stage -Force | Out-Null
 foreach ($file in $manifest.files) {
     $target = Join-Path $downloads $file.name
     if (-not (Test-Path $target)) { Invoke-WebRequest -Uri $file.url -OutFile $target }
-    if ((Get-FileHash $target -Algorithm SHA256).Hash -ne $file.sha256) { throw "Dependency hash mismatch: $($file.name)" }
+    if ((Get-FileHash $target -Algorithm SHA256).Hash -ne $file.sha256) { throw "Контрольная сумма зависимости не совпадает: $($file.name)" }
 }
 & (Join-Path $PSScriptRoot 'build-usb-helper.ps1') -Deps $Deps -MingwRoot $MingwRoot
 dotnet publish (Join-Path $repo 'desktop') -c Release -r win-x64 --self-contained true -o $stage --verbosity quiet
-if ($LASTEXITCODE) { throw 'Desktop publish failed.' }
+if ($LASTEXITCODE) { throw 'Не удалось подготовить приложение к распространению.' }
 dotnet publish (Join-Path $repo 'tools\bleprobe') -c Release -r win-x64 --self-contained true -o (Join-Path $stage 'engine\bleprobe') --verbosity quiet
-if ($LASTEXITCODE) { throw 'Bluetooth publish failed.' }
+if ($LASTEXITCODE) { throw 'Не удалось подготовить помощник Bluetooth.' }
 $runtime = Join-Path $stage 'runtime'
 Expand-Archive (Join-Path $downloads 'python-embed.zip') -DestinationPath $runtime -Force
 $signature = Get-AuthenticodeSignature (Join-Path $runtime 'python.exe')
-if ($signature.Status -ne 'Valid' -or $signature.SignerCertificate.Subject -notmatch 'Python Software Foundation') { throw 'Python runtime signature failed.' }
+if ($signature.Status -ne 'Valid' -or $signature.SignerCertificate.Subject -notmatch 'Python Software Foundation') { throw 'Подпись среды Python не прошла проверку.' }
 & $python -m pip install --upgrade --target (Join-Path $runtime 'Lib\site-packages') --only-binary=:all: --platform win_amd64 --python-version 3.13 --implementation cp --abi cp313 -r (Join-Path $repo 'installer\requirements.txt')
-if ($LASTEXITCODE) { throw 'Vendored Python packages failed.' }
+if ($LASTEXITCODE) { throw 'Не удалось включить Python-пакеты в комплект.' }
 @('python313.zip','.','Lib\site-packages','..\airdrop','import site') | Set-Content (Join-Path $runtime 'python313._pth') -Encoding ascii
 @{PythonExe='runtime\python.exe'} | ConvertTo-Json | Set-Content (Join-Path $stage 'settings.json') -Encoding UTF8
 foreach ($folder in @('airdrop','drivers\tap','licenses','source')) { New-Item -ItemType Directory (Join-Path $stage $folder) -Force | Out-Null }
@@ -33,7 +35,7 @@ Get-ChildItem (Join-Path $repo 'airdrop') -File | Copy-Item -Destination (Join-P
 Copy-Item (Join-Path $repo 'build\awdl_link.exe'),(Join-Path $Deps 'devourer-bridge.exe') -Destination (Join-Path $stage 'engine') -Force
 $mingw = (Resolve-Path -LiteralPath $MingwRoot).Path
 foreach ($dll in @('libgcc_s_seh-1.dll','libstdc++-6.dll','libwinpthread-1.dll')) { Copy-Item (Join-Path $mingw "bin\$dll") -Destination (Join-Path $stage 'engine') -Force }
-Copy-Item (Join-Path $Deps 'pulseit-usb.exe') -Destination (Join-Path $stage 'drivers') -Force
+Copy-Item (Join-Path $Deps 'pulsar-usb.exe') -Destination (Join-Path $stage 'drivers') -Force
 Copy-Item (Join-Path $Deps 'tap-9.27.0\dist.win10\amd64\*') -Destination (Join-Path $stage 'drivers\tap') -Recurse -Force
 Copy-Item (Join-Path $repo 'desktop\RecoverBluetooth.ps1'),(Join-Path $repo 'installer\Setup-Devices.ps1'),(Join-Path $repo 'tools\install-awdl-tap.ps1'),(Join-Path $repo 'tools\configure-awdl-firewall.ps1') -Destination $stage -Force
 Copy-Item (Join-Path $repo 'assets') -Destination $stage -Recurse -Force
@@ -49,16 +51,16 @@ Copy-Item (Join-Path $mingw 'licenses\winpthreads\COPYING') (Join-Path $stage 'l
 Copy-Item (Join-Path $downloads 'libwdi-source.zip') (Join-Path $stage 'source\libwdi-1.5.1.zip') -Force
 # Bundle corresponding local/upstream source without device captures, identities or credentials.
 & $python (Join-Path $repo 'tools\installer-source.py') --stage $stage --deps $Deps
-if ($LASTEXITCODE) { throw 'Source and payload manifests failed.' }
+if ($LASTEXITCODE) { throw 'Не удалось создать манифесты исходников и файлов установки.' }
 & (Join-Path $runtime 'python.exe') -E -s -X utf8 -c 'import cryptography, zeroconf, streaming, service'
-if ($LASTEXITCODE) { throw 'Bundled runtime import check failed.' }
-Write-Output 'Bundled runtime imports: PASS'
+if ($LASTEXITCODE) { throw 'Проверка импорта в комплектной среде завершилась с ошибкой.' }
+Write-Output 'Импорт в комплектной среде: успешно'
 $compiler = Join-Path $Deps 'inno-6.7.3\ISCC.exe'
 if (-not (Test-Path $compiler)) {
     $setup = Join-Path $downloads 'innosetup.exe'
     $signature = Get-AuthenticodeSignature $setup
-    if ($signature.Status -ne 'Valid' -or $signature.SignerCertificate.Subject -notmatch 'Pyrsys') { throw 'Compiler signature failed.' }
+    if ($signature.Status -ne 'Valid' -or $signature.SignerCertificate.Subject -notmatch 'Pyrsys') { throw 'Подпись компилятора не прошла проверку.' }
     Start-Process $setup -WindowStyle Hidden -ArgumentList @('/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART','/CURRENTUSER',("/DIR=" + (Join-Path $Deps 'inno-6.7.3'))) -Wait
 }
-& $compiler ("/DStage=$stage") (Join-Path $repo 'installer\PulseIt.iss')
-if ($LASTEXITCODE) { throw 'Setup compiler failed.' }
+& $compiler ("/DStage=$stage") (Join-Path $repo 'installer\Pulsar.iss')
+if ($LASTEXITCODE) { throw 'Не удалось собрать установщик.' }

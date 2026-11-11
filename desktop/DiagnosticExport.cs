@@ -1,7 +1,7 @@
 using System.IO.Compression;
 using System.Text.Json;
 
-namespace PulseIt;
+namespace Pulsar;
 
 static class DiagnosticExport
 {

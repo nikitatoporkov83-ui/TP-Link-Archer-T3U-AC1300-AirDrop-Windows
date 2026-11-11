@@ -1,5 +1,6 @@
 """Resolve AirDrop services, confirming candidate peers over HTTPS before listing them."""
 import argparse
+from ru_cli import ArgumentParser
 import concurrent.futures
 import ipaddress
 import json
@@ -17,7 +18,7 @@ from service import certificate
 def endpoint(address, port):
     address = str(ipaddress.IPv6Address(address.split('%')[0]))
     if not ipaddress.IPv6Address(address).is_link_local or not 1 <= port <= 65535:
-        raise ValueError('invalid native AirDrop endpoint')
+        raise ValueError('недопустимый адрес устройства AirDrop')
     return address, port
 
 
@@ -122,11 +123,11 @@ def discover(args):
         finally:
             browser.cancel()
             zc.close()
-    print('Discovery finished. If your phone is missing, refresh Everyone mode or use Bluetooth recovery.', flush=True)
+    print('Поиск завершён. Если телефон не виден, обновите режим «Для всех» или восстановите Bluetooth.', flush=True)
 
 
 if __name__ == '__main__':
-    p = argparse.ArgumentParser()
+    p = ArgumentParser()
     p.add_argument('--address', required=True)
     p.add_argument('--ifindex', type=int, required=True)
     p.add_argument('--sid', required=True)

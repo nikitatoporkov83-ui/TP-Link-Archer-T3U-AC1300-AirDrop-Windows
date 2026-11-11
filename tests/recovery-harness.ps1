@@ -1,4 +1,4 @@
-param([string]$Scenario, [string]$RecoveryScript, [string]$Root)
+﻿param([string]$Scenario, [string]$RecoveryScript, [string]$Root)
 # Isolated command mocks: this harness never invokes a radio executable or Windows service mutation.
 $ErrorActionPreference = 'Stop'
 $global:pulseHarnessRoot = $Root
@@ -30,10 +30,10 @@ function Start-Service {
     Save-HarnessState
 }
 function Stop-Service { param($Name) if(-not $global:pulseStates.ContainsKey($Name)){throw 'Unexpected service mutation'}; $global:pulseStates[$Name]='Stopped'; Save-HarnessState }
-function PulseItFakeRadio { param($Action) if($Action -ne 'radio-cycle'){throw 'Unexpected radio operation'}; $global:pulseCycles++; $global:LASTEXITCODE=0; Save-HarnessState }
+function PulsarFakeRadio { param($Action) if($Action -ne 'radio-cycle'){throw 'Unexpected radio operation'}; $global:pulseCycles++; $global:LASTEXITCODE=0; Save-HarnessState }
 function Start-Process {
     param($FilePath,$ArgumentList,$WindowStyle,[switch]$PassThru,$RedirectStandardOutput,$RedirectStandardError)
-    if ($FilePath -ne 'PulseItFakeRadio') { throw 'Refused real process launch in recovery test' }
+    if ($FilePath -ne 'PulsarFakeRadio') { throw 'Refused real process launch in recovery test' }
     $global:pulseStarts++; $global:pulseLastLog=$RedirectStandardOutput
     $ready = $global:pulseScenario -ne 'never-starts' -and ($global:pulseScenario -ne 'fallback' -or $global:pulseStarts -gt 1)
     Set-Content $RedirectStandardOutput $(if($ready){'airdrop state=Started error=Success'}else{'airdrop state=Waiting error=ResourceInUse'})
@@ -45,5 +45,5 @@ function Start-Process {
     return $process
 }
 Save-HarnessState
-& $RecoveryScript -BleExe PulseItFakeRadio -LogDirectory $Root
+& $RecoveryScript -BleExe PulsarFakeRadio -LogDirectory $Root
 exit $LASTEXITCODE

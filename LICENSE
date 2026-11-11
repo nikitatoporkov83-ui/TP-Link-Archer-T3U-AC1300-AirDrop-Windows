@@ -1,19 +1,23 @@
-PulseIt source licensing
-=========================
+Лицензии исходного кода Пульсар
+===============================
 
-Unless a file notice or exception below states otherwise, local project source
-is licensed under GNU GPL version 3 or (at your option) any later version
-(SPDX: GPL-3.0-or-later). The complete text is in COPYING.
+Пульсар основан на PulseIt (https://github.com/gsl0001/windows-airdrop).
+Русский перевод и переименование не меняют лицензии исходных компонентов.
 
-Exceptions retaining their own licenses:
+Если уведомление файла или исключение ниже не указывает иное, локальные
+исходники имеют лицензию GNU GPL версии 3 или любой более поздней версии
+(SPDX: GPL-3.0-or-later). Полный исходный текст находится в COPYING.
 
-- radio/devourer/bridge.cpp and radio/devourer/awdlcap.cpp: GPL-2.0-only;
-  see licenses/GPL-2.0.txt. Standalone devourer programs, not linked with OWL.
-- patches/devourer-01-mingw-txdemo-fork.patch: GPL-2.0-only, a devourer change.
-- radio/pipe_protocol.h and radio/frame_filter.h: MIT; see licenses/MIT.txt.
-- airdrop/media_capabilities.json: MIT; upstream attribution and full terms
-  in airdrop/THIRD_PARTY_NOTICES.md.
+Исключения:
 
-Fetched third-party code retains its upstream copyright and license. This
-default does not relicense third-party code, drivers, runtimes or SDK
-redistributables. See THIRD_PARTY_NOTICES.md.
+- radio/devourer/bridge.cpp и radio/devourer/awdlcap.cpp: GPL-2.0-only,
+  см. licenses/GPL-2.0.txt. Это отдельные программы devourer, не связанные с OWL.
+- patches/devourer-01-mingw-txdemo-fork.patch: GPL-2.0-only, изменение devourer.
+- radio/pipe_protocol.h и radio/frame_filter.h: MIT, см. licenses/MIT.txt.
+- airdrop/media_capabilities.json: MIT; авторство и полный текст находятся
+  в airdrop/THIRD_PARTY_NOTICES.md.
+
+Загружаемый сторонний код сохраняет собственные авторские права и лицензию.
+Это описание не перелицензирует сторонние драйверы, среды или SDK.
+См. THIRD_PARTY_NOTICES.md. Полные юридические тексты лицензий сохранены
+на языке оригинала; этот документ объясняет их применение к компонентам.

@@ -1,11 +1,11 @@
-# PulseIt visual assets
+# Оформление Пульсар
 
-- `brand/pulseit.svg`: editable vector mark; the waveform is original to this project.
-- `brand/pulseit.png`: transparent 1024 px mark.
-- `brand/PulseIt.ico`: Windows icon with 16, 24, 32, 48, 64, 128 and 256 px frames.
-- `installer/`: high-DPI welcome and small wizard bitmaps.
-- `readme/`: public vector diagrams and screenshots rendered with synthetic demo data.
+- `brand/pulsar.svg` — редактируемый векторный знак; исходная форма импульса сохранена с авторством PulseIt.
+- `brand/pulsar.png` — знак 1024 пикселя.
+- `brand/Pulsar.ico` — значок Windows с размерами 16, 24, 32, 48, 64, 128 и 256 пикселей.
+- `installer/` — панели установщика для высокого DPI.
+- `readme/` — русские схемы и иллюстрации интерфейса с вымышленными данными.
 
-Run `powershell.exe -NoProfile -ExecutionPolicy Bypass -File tools/render-brand.ps1` on Windows to regenerate the PNG, ICO and setup bitmaps with System.Drawing. The SVG and in-app vector share the same normalized waveform coordinates. Asset changes must also be included by `tools/installer-source.py` so executable icons can be rebuilt from distributed source.
+Для пересоздания PNG, ICO и панелей на Windows выполните `powershell.exe -NoProfile -ExecutionPolicy Bypass -File tools/render-brand.ps1`. Скрипт использует System.Drawing; вектор SVG и знак в приложении имеют одни координаты. Изменения графики должны входить в `tools/installer-source.py`, чтобы оформление можно было восстановить из распространяемых исходников.
 
-Screenshots are illustrative; they are not evidence of physical device discovery or file delivery. These project-created assets follow the repository's default license.
+Русские иллюстрации интерфейса подготовлены на основе исходных демонстрационных изображений. Это не снимки аппаратной проверки: они не подтверждают обнаружение устройства, доставку или внешний вид каждого системного диалога. Графика распространяется по применимой лицензии исходного проекта.

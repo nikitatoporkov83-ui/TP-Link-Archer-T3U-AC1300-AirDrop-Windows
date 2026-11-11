@@ -2,7 +2,7 @@ using System.Diagnostics;
 using System.Drawing.Drawing2D;
 using System.Media;
 
-namespace PulseIt;
+namespace Pulsar;
 
 // Original two-note chime synthesized at startup (not Apple's AirDrop sound).
 static class Chime
@@ -62,21 +62,21 @@ sealed class ConsentDialog : DarkDialog
     {
         Id = ask.Id; TopMost = true;
         var shown = ask.Files.Take(4).ToList();
-        if (ask.Files.Length > 4) shown.Add($"and {ask.Files.Length - 4} more");
+        if (ask.Files.Length > 4) shown.Add($"ещё {ask.Files.Length - 4}");
         int listHeight = shown.Count * 24 + 20, y = 168 + listHeight + 20;
         ClientSize = new Size(380, y + 44 + 24);
         var icon = new AppIcon { Bounds = new Rectangle(162, 24, 56, 56), Corner = 28 };
-        string size = ask.Bytes < 1 << 20 ? $"{ask.Bytes / 1024.0:0.#} KB" : $"{ask.Bytes / 1048576.0:0.#} MB";
+        string size = ask.Bytes < 1 << 20 ? $"{ask.Bytes / 1024.0:0.#} КБ" : $"{ask.Bytes / 1048576.0:0.#} МБ";
         var list = new Surface { Bounds = new Rectangle(24, 168, 332, listHeight), BackColor = Theme.Well, Radius = 12 };
         for (int i = 0; i < shown.Count; i++)
             list.Controls.Add(Caption(shown[i], Theme.UI(9.5f), i < 4 ? Theme.Text : Theme.Secondary, new Rectangle(14, 10 + i * 24, 304, 24), ContentAlignment.MiddleLeft));
-        var decline = MakeButton("Decline", false, new Rectangle(24, y, 160, 44));
-        var accept = MakeButton("Accept", true, new Rectangle(196, y, 160, 44));
+        var decline = MakeButton("Отклонить", false, new Rectangle(24, y, 160, 44));
+        var accept = MakeButton("Принять", true, new Rectangle(196, y, 160, 44));
         decline.Click += (_, _) => { DialogResult = DialogResult.Cancel; Close(); };
         accept.Click += (_, _) => { DialogResult = DialogResult.OK; Close(); };
         Controls.AddRange([icon,
             Caption(ask.Sender, Theme.Semibold(14), Theme.Text, new Rectangle(20, 92, 340, 32)),
-            Caption($"wants to share {(ask.Files.Length == 1 ? "a file" : ask.Files.Length + " files")} · {size}", Theme.UI(9.5f), Theme.Secondary, new Rectangle(20, 124, 340, 24)),
+            Caption($"Хочет передать {Russian.Files(ask.Files.Length)} · {size}", Theme.UI(9.5f), Theme.Secondary, new Rectangle(20, 124, 340, 24)),
             list, decline, accept]);
         AcceptButton = accept; CancelButton = decline;
         Done();
@@ -89,7 +89,7 @@ sealed class ProfileDialog : DarkDialog
     public ProfileDialog(Session session) : base(380, 392)
     {
         string model = session.Model;
-        var name = new TextBox { Text = session.Name, MaxLength = 40, BorderStyle = BorderStyle.None, BackColor = Theme.Well, ForeColor = Theme.Text, Font = Theme.UI(11), Bounds = new Rectangle(14, 11, 304, 26), AccessibleName = "AirDrop name" };
+        var name = new TextBox { Text = session.Name, MaxLength = 40, BorderStyle = BorderStyle.None, BackColor = Theme.Well, ForeColor = Theme.Text, Font = Theme.UI(11), Bounds = new Rectangle(14, 11, 304, 26), AccessibleName = "Имя в AirDrop" };
         var field = new Surface { Bounds = new Rectangle(24, 96, 332, 46), BackColor = Theme.Well, Radius = 12, Cursor = Cursors.IBeam };
         field.Controls.Add(name); field.Click += (_, _) => name.Focus();
         var choices = Session.Models.Select((m, i) => new Pill { Text = m.Label, Tag = m.Model, Radius = 12, Font = Theme.UI(10), Bounds = new Rectangle(24 + i % 2 * 172, 184 + i / 2 * 52, 160, 44) }).ToArray();
@@ -101,8 +101,8 @@ sealed class ProfileDialog : DarkDialog
         foreach (var c in choices) c.Click += (_, _) => Pick((string)c.Tag!);
         Pick(model);
         var error = Caption("", Theme.UI(9), Theme.Red, new Rectangle(24, 142, 332, 20), ContentAlignment.MiddleLeft);
-        var cancel = MakeButton("Cancel", false, new Rectangle(24, 324, 160, 44));
-        var save = MakeButton("Save", true, new Rectangle(196, 324, 160, 44));
+        var cancel = MakeButton("Отмена", false, new Rectangle(24, 324, 160, 44));
+        var save = MakeButton("Сохранить", true, new Rectangle(196, 324, 160, 44));
         cancel.Click += (_, _) => Close();
         save.Click += (_, _) =>
         {
@@ -110,12 +110,12 @@ sealed class ProfileDialog : DarkDialog
             catch (ArgumentException ex) { error.Text = ex.Message; }
         };
         Controls.AddRange([
-            Caption("Name & icon", Theme.Semibold(14), Theme.Text, new Rectangle(24, 20, 332, 32), ContentAlignment.MiddleLeft),
-            Caption("How this PC appears in AirDrop", Theme.UI(9.5f), Theme.Secondary, new Rectangle(24, 52, 332, 22), ContentAlignment.MiddleLeft),
+            Caption("Имя и значок", Theme.Semibold(14), Theme.Text, new Rectangle(24, 20, 332, 32), ContentAlignment.MiddleLeft),
+            Caption("Как компьютер выглядит в AirDrop", Theme.UI(9.5f), Theme.Secondary, new Rectangle(24, 52, 332, 22), ContentAlignment.MiddleLeft),
             field, error,
-            Caption("Device icon", Theme.UI(9.5f), Theme.Secondary, new Rectangle(24, 158, 332, 22), ContentAlignment.MiddleLeft),
+            Caption("Значок устройства", Theme.UI(9.5f), Theme.Secondary, new Rectangle(24, 158, 332, 22), ContentAlignment.MiddleLeft),
             .. choices,
-            Caption(session.Running ? "Applies the next time you start receiving." : "Custom photos need an Apple contact card.", Theme.UI(9), Theme.Secondary, new Rectangle(24, 290, 332, 22), ContentAlignment.MiddleLeft),
+            Caption(session.Running ? "Применится при следующем включении приёма." : "Для своего фото нужна карточка контакта Apple.", Theme.UI(9), Theme.Secondary, new Rectangle(24, 290, 332, 22), ContentAlignment.MiddleLeft),
             cancel, save]);
         AcceptButton = save; CancelButton = cancel;
         Done();
@@ -127,12 +127,12 @@ sealed class ActivityWindow : DarkDialog
     public ActivityWindow(TextBox activity) : base(520, 440)
     {
         StartPosition = FormStartPosition.CenterParent; ShowInTaskbar = false;
-        var close = new IconButton { Glyph = "", Font = Theme.Icons(10), Bounds = new Rectangle(474, 14, 34, 34), AccessibleName = "Close" };
+        var close = new IconButton { Glyph = "", Font = Theme.Icons(10), Bounds = new Rectangle(474, 14, 34, 34), AccessibleName = "Закрыть" };
         close.Click += (_, _) => Hide();
         var box = new Surface { Bounds = new Rectangle(16, 60, 488, 364), BackColor = Theme.Well, Radius = 12 };
         activity.Bounds = new Rectangle(14, 12, 464, 340); activity.BackColor = Theme.Well;
         box.Controls.Add(activity);
-        Controls.AddRange([Caption("Activity", Theme.Semibold(14), Theme.Text, new Rectangle(24, 14, 300, 34), ContentAlignment.MiddleLeft), close, box]);
+        Controls.AddRange([Caption("Журнал событий", Theme.Semibold(14), Theme.Text, new Rectangle(24, 14, 300, 34), ContentAlignment.MiddleLeft), close, box]);
         Done();
     }
     protected override void OnFormClosing(FormClosingEventArgs e)
@@ -150,14 +150,14 @@ sealed class RecentRow : Surface
     readonly Image? thumb;
     public RecentRow(FileInfo file)
     {
-        Size = new Size(432, 60); Cursor = Cursors.Hand; AccessibleName = "Show " + file.Name + " in folder"; AccessibleRole = AccessibleRole.PushButton;
+        Size = new Size(432, 60); Cursor = Cursors.Hand; AccessibleName = "Показать " + file.Name + " в папке"; AccessibleRole = AccessibleRole.PushButton;
         if (file.Extension.ToLowerInvariant() is ".jpg" or ".jpeg" or ".png" or ".gif" or ".bmp")
             try { using var source = Image.FromStream(new MemoryStream(File.ReadAllBytes(file.FullName))); thumb = new Bitmap(source, Fit(source.Size, 80)); }
             catch (Exception e) when (e is ArgumentException or IOException or OutOfMemoryException or UnauthorizedAccessException) { }
-        string size = file.Length < 1 << 20 ? $"{file.Length / 1024.0:0.#} KB" : $"{file.Length / 1048576.0:0.#} MB";
+        string size = file.Length < 1 << 20 ? $"{file.Length / 1024.0:0.#} КБ" : $"{file.Length / 1048576.0:0.#} МБ";
         var name = new Label { Text = file.Name, Font = Theme.Semibold(10), ForeColor = Theme.Text, AutoEllipsis = true, Bounds = new Rectangle(64, 10, 310, 22) };
-        var sub = new Label { Text = size + " · " + file.LastWriteTime.ToString("MMM d, h:mm tt"), Font = Theme.UI(8.5f), ForeColor = Theme.Secondary, Bounds = new Rectangle(64, 31, 310, 20) };
-        var reveal = new IconButton { Glyph = "", Bounds = new Rectangle(386, 13, 34, 34), AccessibleName = "Show in folder" };
+        var sub = new Label { Text = size + " · " + file.LastWriteTime.ToString("d MMM, HH:mm"), Font = Theme.UI(8.5f), ForeColor = Theme.Secondary, Bounds = new Rectangle(64, 31, 310, 20) };
+        var reveal = new IconButton { Glyph = "", Bounds = new Rectangle(386, 13, 34, 34), AccessibleName = "Показать в папке" };
         Controls.AddRange([name, sub, reveal]);
         void Reveal(object? s, EventArgs e) => Process.Start(new ProcessStartInfo("explorer.exe") { ArgumentList = { "/select,", file.FullName } });
         foreach (var c in new Control[] { this, name, sub, reveal }) c.Click += Reveal;

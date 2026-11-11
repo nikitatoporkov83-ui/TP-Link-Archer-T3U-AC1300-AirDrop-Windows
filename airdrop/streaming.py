@@ -16,7 +16,7 @@ BLOCK = 64 * 1024
 def exact(source, size):
     data = source.read(size)
     if len(data) != size:
-        raise ValueError('truncated archive')
+        raise ValueError('архив обрезан')
     return data
 
 def decode(source, target):
@@ -26,7 +26,7 @@ def decode(source, target):
         nonlocal total
         total += len(data)
         if total > MAX_ARCHIVE_BYTES:
-            raise ValueError('archive exceeds size limit')
+            raise ValueError('архив превышает допустимый размер')
         target.write(data)
     def inflate_parts(parts, wbits):
         decoder = zlib.decompressobj(wbits)
@@ -46,11 +46,11 @@ def decode(source, target):
     else:
         while header := source.read(4):
             if len(header) != 4:
-                raise ValueError('truncated DVZip header')
+                raise ValueError('заголовок DVZip обрезан')
             value, = struct.unpack('>I', header)
             size = value & 0x7fffffff
             if not size or size > MAX_ARCHIVE_BYTES:
-                raise ValueError('invalid DVZip block length')
+                raise ValueError('недопустимая длина блока DVZip')
             def parts():
                 left = size
                 while left:
@@ -69,7 +69,7 @@ def unpack(source, directory=None, approved=None, mark=None):
     while True:
         count += 1
         if count > MAX_FILES * 4:
-            raise ValueError('too many archive members')
+            raise ValueError('слишком много файлов в архиве')
         magic = exact(source, 6)
         if magic == b'070707':
             header = magic + exact(source, 70)
@@ -81,37 +81,37 @@ def unpack(source, directory=None, approved=None, mark=None):
             mode, size, namesize = fields[1], fields[6], fields[11]
             aligned = True
         else:
-            raise ValueError('missing CPIO header or trailer')
+            raise ValueError('отсутствует заголовок или завершающая запись CPIO')
         if not 1 <= namesize <= 4096 or not 0 <= size <= MAX_ARCHIVE_BYTES:
-            raise ValueError('invalid archive entry bounds')
+            raise ValueError('недопустимые границы записи архива')
         encoded = exact(source, namesize)
         if encoded[-1] != 0 or b'\0' in encoded[:-1]:
-            raise ValueError('invalid archive filename')
+            raise ValueError('недопустимое имя файла в архиве')
         name = encoded[:-1].decode('utf-8')
         if aligned: exact(source, (-source.tell()) % 4)
         if name == 'TRAILER!!!':
             if size or not receipts:
-                raise ValueError('invalid archive trailer or empty archive')
+                raise ValueError('некорректная завершающая запись или пустой архив')
             if approved is not None and used != {name.casefold() for name in approved}:
-                raise ValueError('upload is missing approved files')
+                raise ValueError('в передаче отсутствуют подтверждённые файлы')
             for chunk in iter(lambda: source.read(BLOCK), b''):
-                if any(chunk): raise ValueError('trailing archive data')
+                if any(chunk): raise ValueError('лишние данные после архива')
             return receipts
         regular = stat.S_ISREG(mode)
         if not regular and not stat.S_ISDIR(mode):
-            raise ValueError('archive contains a link or special file')
+            raise ValueError('архив содержит ссылку или специальный файл')
         skip = not regular or name.replace('\\', '/').rsplit('/', 1)[-1].startswith('._')
         output = safe_name(name)
         if not skip:
             if output.casefold() in used:
-                raise ValueError('duplicate output name')
+                raise ValueError('повторяющееся имя выходного файла')
             used.add(output.casefold())
             total += size
             if total > MAX_FILE_BYTES or len(receipts) >= MAX_FILES:
-                raise ValueError('transfer exceeds file limits')
+                raise ValueError('передача превышает ограничения на файлы')
             if approved is not None:
-                if output not in approved: raise ValueError('upload names differ from approved request')
-                if size > approved[output]: raise ValueError(f'{output} is larger than the approved size')
+                if output not in approved: raise ValueError('имена передаваемых файлов не совпадают с подтверждённым запросом')
+                if size > approved[output]: raise ValueError(f'размер {output} превышает подтверждённый')
         digest = hashlib.sha256()
         dest = (directory / output).open('xb') if directory is not None and not skip else None
         try:
@@ -147,7 +147,7 @@ def _block_tail(source, start):
         nonlocal tail, decoded
         decoded += len(chunk)
         if decoded > MAX_ARCHIVE_BYTES:  # same bound decode() enforces: stop a bomb early
-            raise ValueError('archive exceeds size limit')
+            raise ValueError('архив превышает допустимый размер')
         tail = (tail + chunk)[-TAIL_KEEP:]
     while left:
         data = exact(source, min(BLOCK, left))
@@ -157,7 +157,7 @@ def _block_tail(source, start):
             data = decoder.unconsumed_tail
     keep(decoder.flush())
     if not decoder.eof or decoder.unused_data:
-        raise ValueError('incomplete compressed block')
+        raise ValueError('сжатый блок обрезан')
     return tail
 
 def _ends_with_trailer_record(tail):
@@ -259,14 +259,14 @@ def prepare(path, target):
     with path.open('rb') as source:
         size = os.fstat(source.fileno()).st_size
         if not stat.S_ISREG(os.fstat(source.fileno()).st_mode) or size > MAX_FILE_BYTES:
-            raise ValueError('choose a regular file of at most 1 GiB')
+            raise ValueError('выберите обычный файл размером до 1 ГиБ')
         block(entry(name, size, 1))
         left = size
         while left:
             chunk = exact(source, min(BLOCK, left))
             digest.update(chunk); block(chunk); left -= len(chunk)
         if source.read(1) or os.fstat(source.fileno()).st_size != size:
-            raise ValueError('file changed while preparing transfer')
+            raise ValueError('файл изменился во время подготовки передачи')
     block(entry(b'TRAILER!!!\0', 0, 2))
     target.seek(0)
     return size, digest.hexdigest()

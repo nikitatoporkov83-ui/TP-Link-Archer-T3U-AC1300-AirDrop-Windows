@@ -2,7 +2,7 @@
 // write every frame to a pcap Wireshark opens, and count what was heard,
 // picking out AWDL action frames (category 127, Apple OUI 00:17:f2, type 8).
 //
-//   awdlcap <channel> <seconds> <out.pcap>      e.g.  awdlcap 6 30 ch6.pcap
+//   awdlcap <канал> <секунды> <выход.pcap>      e.g.  awdlcap 6 30 ch6.pcap
 //
 // Links devourer, so this program is GPL-2.0 (see LICENSE).
 #include <libusb.h>
@@ -71,9 +71,19 @@ static void on_frame(const Packet &p) {
 	fwrite(d, 1, len, pcap);
 }
 
+#ifdef _WIN32
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#include <windows.h>
+#endif
+
 int main(int argc, char **argv) {
+#ifdef _WIN32
+    SetConsoleOutputCP(CP_UTF8);
+#endif
 	if (argc != 4) {
-		fprintf(stderr, "usage: awdlcap <channel> <seconds> <out.pcap>\n");
+		fprintf(stderr, "Использование: awdlcap <канал> <секунды> <выход.pcap>\n");
 		return 2;
 	}
 	const int channel = atoi(argv[1]), seconds = atoi(argv[2]);

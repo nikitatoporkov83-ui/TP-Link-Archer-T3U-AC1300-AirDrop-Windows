@@ -1,9 +1,9 @@
-# Contributing
+# Участие в разработке
 
-Read the [build guide](docs/build.md), [architecture](docs/architecture.md), [limitations](docs/limitations.md) and [license map](LICENSE). Preserve the separate OWL/devourer process boundary.
+Прочитайте [инструкцию сборки](docs/build.md), [архитектуру](docs/architecture.md), [ограничения](docs/limitations.md) и [карту лицензий](LICENSE). Сохраняйте разделение OWL и devourer на отдельные процессы.
 
-Run Python regressions, native CTest and desktop builds for components changed. Add a regression for a nontrivial bug. Separate actual passes, skips and hardware requirements. Mocked BLE/local HTTPS tests are not iPhone acceptance.
+Проверяйте изменённые компоненты: Python-тесты, нативный CTest и сборку интерфейса. Для нетривиальной ошибки добавляйте регрессионную проверку. Отдельно указывайте успешные проверки, пропуски и необходимость оборудования. Локальные HTTPS-тесты и имитация BLE не подтверждают обмен с iPhone.
 
-Hardware reports should include USB ID, Windows version, revision, direction, size and observed result. Use synthetic files; do not attach unreviewed logs/captures or personal data. Speed/channel changes require controlled same-file measurements and remain opt-in until qualified.
+В аппаратном отчёте нужны USB ID, версия Windows, коммит, направление, размер файла и наблюдаемый результат. Используйте искусственные файлы, удаляйте личные данные из журналов. Изменения скорости и каналов сравнивайте на одном и том же файле; экспериментальные режимы должны включаться явно до проверки.
 
-Contributions use the applicable license of the files changed. Preserve upstream notices. Do not commit binaries, drivers, keys, captures, environments or session records.
+Сохраняйте лицензию и авторские уведомления изменяемого компонента. Не добавляйте в Git сборки, драйверы, ключи, записи трафика, окружения или журналы сеансов. При переводе сохраняйте машинные ключи JSON, параметры команд и записи протокола; согласованно обновляйте сообщения, которые читают другие процессы.

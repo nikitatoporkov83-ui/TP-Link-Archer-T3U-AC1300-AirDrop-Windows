@@ -70,6 +70,7 @@ static void peer_removed(struct awdl_peer *peer, void *ctx) {
 
 
 int main(int argc, char **argv) {
+    SetConsoleOutputCP(CP_UTF8);
     int probe = 0, listen = 0, fixed = 0, match = 0, rx_aggregation = 1, ack_merge = 1;
     unsigned service_port = 0;
     /* Unicast data rate. While receiving, almost every unicast is a TCP ACK; at 12 Mbit/s
@@ -302,6 +303,6 @@ int main(int argc, char **argv) {
     awdl_netif_close(net.nif);
     return failed;
 usage:
-    fprintf(stderr, "usage: awdl_link <pipe> <6|36|44|149> <seconds 1..3600> [--probe|--listen] [--fixed [--match-channel]] [--data-rate 12|18|24|36|48|54 (default 54)] [--no-rx-aggregation] [--no-ack-merge] [--tap NAME] [--service-port PORT] [--stop-file PATH]\n");
+    fprintf(stderr, "Использование: awdl_link <канал> <6|36|44|149> <секунды 1..3600> [--probe|--listen] [--fixed [--match-channel]] [--data-rate 12|18|24|36|48|54 (по умолчанию 54)] [--no-rx-aggregation] [--no-ack-merge] [--tap NAME] [--service-port PORT] [--stop-file PATH]\n");
     return 2;
 }

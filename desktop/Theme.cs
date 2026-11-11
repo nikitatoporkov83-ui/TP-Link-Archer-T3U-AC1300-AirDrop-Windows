@@ -2,7 +2,7 @@ using System.Drawing.Drawing2D;
 using System.Runtime.InteropServices;
 using System.Text;
 
-namespace PulseIt;
+namespace Pulsar;
 
 static class Theme
 {
@@ -162,7 +162,7 @@ sealed class Dot : Control
     }
 }
 
-// PulseIt mark; coordinates match assets/brand/pulseit.svg.
+// Pulsar mark; coordinates match assets/brand/pulsar.svg.
 sealed class AppIcon : Control
 {
     public bool On = true;
@@ -235,7 +235,7 @@ sealed class DropZone : Surface
 sealed class DeviceRow : Surface
 {
     public readonly Device Device;
-    public readonly Pill Send = new() { Text = "Send", Radius = 12 };
+    public readonly Pill Send = new() { Text = "Отправить", Radius = 12 };
     readonly Label status = new() { Text = "AirDrop", Font = Theme.UI(9), ForeColor = Theme.Secondary, Bounds = new Rectangle(84, 39, 224, 20) };
     // When the radio stops hearing the phone; the row stays for a grace period instead of vanishing.
     public DateTime? LostAt { get; private set; }
@@ -244,7 +244,7 @@ sealed class DeviceRow : Surface
     public void SetLost(bool lost)
     {
         LostAt = lost ? LostAt ?? DateTime.Now : null;
-        status.Text = lost ? "Reconnect to send" : "AirDrop";
+        status.Text = lost ? "Нет связи с устройством" : "AirDrop";
         status.ForeColor = lost ? Theme.Orange : Theme.Secondary;
     }
     public DeviceRow(Device device)
@@ -252,7 +252,7 @@ sealed class DeviceRow : Surface
         Device = device; Size = new Size(432, 72);
         Controls.Add(new Label { Text = device.Name, Font = Theme.Semibold(11), ForeColor = Theme.Text, AutoEllipsis = true, Bounds = new Rectangle(84, 13, 224, 26) });
         Controls.Add(status);
-        Send.Bounds = new Rectangle(322, 15, 96, 42); Send.AccessibleName = "Send to " + device.Name;
+        Send.Bounds = new Rectangle(322, 15, 96, 42); Send.AccessibleName = "Отправить на " + device.Name;
         Controls.Add(Send);
     }
     protected override void OnPaint(PaintEventArgs e)

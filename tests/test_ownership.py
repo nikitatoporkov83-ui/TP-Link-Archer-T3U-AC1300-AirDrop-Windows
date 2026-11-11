@@ -18,7 +18,7 @@ class OwnershipTests(unittest.TestCase):
                 cwd=Path(__file__).resolve().parents[1] / 'airdrop', stdin=subprocess.PIPE, stdout=subprocess.PIPE, text=True)
             try:
                 self.assertEqual(child.stdout.readline().strip(), 'ready')
-                with self.assertRaisesRegex(RuntimeError, 'Another receiver'):
+                with self.assertRaisesRegex(RuntimeError, 'другой приёмник'):
                     with receiver_lease(root): self.fail('must not acquire a live lock')
                 # Exit the lock owner, not a Windows Store Python launcher process.
                 child.stdin.write('crash\n'); child.stdin.flush(); child.wait(timeout=5)

@@ -1,13 +1,15 @@
-# Architecture
+# Архитектура
 
-`PulseIt.exe` supervises the native link, standalone radio bridge, Python HTTPS receiver/sender and BLE helper. Helpers belong to a session and are drained or stopped when it ends. Readiness reports the failing startup stage and helper exit instead of a generic timeout.
+`Pulsar.exe` управляет нативным каналом AWDL, отдельным радиомостом, Python-приёмником и отправителем HTTPS, а также помощником BLE. Все дочерние процессы принадлежат сеансу; при завершении их вывод дочитывается, а процессы останавливаются. Ошибка запуска сообщает этап и код завершения.
 
-`awdl_link.exe` links GPL-3.0-or-later OWL. It drives synchronization, peers, scheduled frames and a TAP-Windows6 interface. `devourer-bridge.exe` is a separate GPL-2.0-only executable owning USB, RX, injection, channel and hardware ACK identity. They exchange bounded messages over a local single-client named pipe. The shared protocol and frame filter are MIT licensed; neither build links the other project's objects.
+`awdl_link.exe` использует OWL под GPL-3.0-or-later: синхронизацию, соседей, расписание кадров и интерфейс TAP-Windows6. Отдельный `devourer-bridge.exe` под GPL-2.0-only управляет USB, приёмом, отправкой сырых кадров, каналом и MAC-адресом аппаратных ACK. Между процессами идут ограниченные сообщения по локальному именованному каналу с одним клиентом. Общий протокол и фильтр кадров имеют лицензию MIT. Объекты двух лицензируемых движков не связываются друг с другом.
 
-The Python service handles discovery, approval and uploads over HTTPS on the AWDL link-local interface. It uses bounded disk-backed streaming, validates archives and approved metadata, and publishes a completed transfer folder only after validation. An OS-held folder lease prevents competing receivers sharing a destination. Only explicit matching approval accepts a transfer; silence declines.
+Python-служба обрабатывает обнаружение, подтверждение и загрузку по HTTPS на локальном адресе канала AWDL. Потоковая обработка использует временные файлы и ограниченную память, проверяет архив и согласованные метаданные, а готовую папку публикует только после проверки. Блокировка ОС не позволяет двум приёмникам использовать одну папку. Принимается только явное подтверждение с совпадающим идентификатором; отсутствие ответа означает отказ.
 
-Discovery distinguishes radio sightings from verified HTTPS endpoints. Sending revalidates stale endpoints without silently substituting another device with the same name. Approval and uploads are not automatically replayed after ambiguous failure.
+Обнаружение различает услышанный радиосигнал и проверенный адрес HTTPS. Перед отправкой устаревший адрес проверяется заново; устройство с таким же именем не подставляется автоматически. После неоднозначной ошибки запрос согласия и загрузка не повторяются самостоятельно.
 
-Windows BLE advertising is shared and can be blocked. Ordinary retries do not reset Bluetooth. Explicit recovery may pause connected-device services and cycle Bluetooth, then attempts to restore services. Publisher status does not prove the iPhone heard an advertisement.
+Общий ресурс объявлений Windows BLE может быть занят. Обычные повторы не перезапускают Bluetooth. Явное восстановление временно приостанавливает службы подключённых устройств и при необходимости перезапускает Bluetooth, затем восстанавливает исходные состояния. Статус процесса не доказывает, что iPhone получил объявление.
 
-Logs contain UTC/monotonic timing, HTTP phases and radio/queue counters. Diagnostic export excludes private keys and received contents, but names, addresses, file names and paths can remain. Treat exports and captures as private.
+Интерфейс и пользовательские сообщения русские. Ключи JSON, идентификаторы событий, параметры команд и машинные записи радиопротокола сохранены. Даты интерфейса используют русскую культуру и 24-часовое время; журналы сохраняют UTC и монотонные интервалы.
+
+Экспорт диагностики исключает ключи и содержимое принятых файлов, но может содержать имена, адреса и пути. Журналы и записи трафика требуют обезличивания перед публикацией.

@@ -1,5 +1,6 @@
 """Send one explicitly selected file through the native AirDrop HTTPS protocol."""
 import argparse
+from ru_cli import ArgumentParser
 import datetime
 import errno
 import tempfile
@@ -23,32 +24,32 @@ from service import NAME, MODEL, MAX_METADATA, certificate, clean, display_name,
 class PeerRefused(ValueError):
     def __init__(self, endpoint, status):
         self.endpoint, self.status = endpoint, status
-        super().__init__(f'{endpoint} refused: HTTP {status}')
+        super().__init__(f'Устройство отклонило {endpoint}: HTTP {status}')
 
 
 def error_event(error):
     if isinstance(error, PeerRefused):
         code = 'peer_refused'
-        phase = 'transfer request' if error.endpoint == '/Ask' else 'upload' if error.endpoint == '/Upload' else 'discovery'
-        message = f'The receiving device refused {phase} (HTTP {error.status}). Check it before retrying.'
+        phase = 'запрос на передачу' if error.endpoint == '/Ask' else 'загрузку файла' if error.endpoint == '/Upload' else 'обнаружение'
+        message = f'Принимающее устройство отклонило {phase} (HTTP {error.status}). Проверьте его перед повтором.'
     elif isinstance(error, (ConnectionResetError, BrokenPipeError)):
-        code, message = 'connection_reset', 'The connection ended during transfer. Check the iPhone before retrying; the file may be incomplete.'
+        code, message = 'connection_reset', 'Соединение оборвалось во время передачи. Перед повтором проверьте iPhone: файл может быть неполным.'
     elif isinstance(error, ConnectionRefusedError):
-        code, message = 'not_listening', 'The iPhone is not accepting AirDrop connections. Refresh Everyone mode and the device list.'
+        code, message = 'not_listening', 'iPhone не принимает подключения AirDrop. Обновите режим «Для всех» и список устройств.'
     elif isinstance(error, TimeoutError):
-        code, message = 'timeout', 'The transfer timed out. Check the iPhone before retrying.'
+        code, message = 'timeout', 'Истекло время ожидания передачи. Перед повтором проверьте iPhone.'
     elif isinstance(error, FileNotFoundError):
-        code, message = 'file_missing', 'The selected file is no longer available. Choose it again.'
+        code, message = 'file_missing', 'Выбранный файл больше недоступен. Выберите его снова.'
     elif isinstance(error, OSError) and error.errno == errno.ENOSPC:
-        code, message = 'disk_full', 'Windows has insufficient free space to prepare this transfer.'
+        code, message = 'disk_full', 'В Windows недостаточно свободного места для подготовки передачи.'
     elif isinstance(error, PermissionError):
-        code, message = 'access_denied', 'Windows denied file or network access. Check permissions and the logs.'
+        code, message = 'access_denied', 'Windows запретила доступ к файлу или сети. Проверьте права и журналы.'
     elif isinstance(error, ssl.SSLError):
-        code, message = 'tls', 'The secure connection failed. Refresh the device list and try again.'
+        code, message = 'tls', 'Не удалось установить защищённое соединение. Обновите список устройств и повторите.'
     elif isinstance(error, ValueError):
         code, message = 'invalid_data', clean(error)[:300]
     else:
-        code, message = 'failed', 'The transfer failed. Open the logs for details.'
+        code, message = 'failed', 'Передача завершилась с ошибкой. Подробности в журналах.'
     return {'event': 'send-error', 'code': code, 'message': message}
 
 
@@ -85,7 +86,7 @@ def post(conn, endpoint, body, headers=None, chunked=False):
     data = response.read(MAX_METADATA + 1)
     if len(data) > MAX_METADATA:
         conn.close()
-        raise ValueError('oversized peer response')
+        raise ValueError('ответ устройства превышает допустимый размер')
     if response.status != 200:
         raise PeerRefused(endpoint, response.status)
     return data
@@ -94,7 +95,7 @@ def post(conn, endpoint, body, headers=None, chunked=False):
 def send_file(path, peer, port, address, ifindex, sid, context, name=NAME, model=MODEL):
     path = Path(path)
     if not path.is_file() or path.stat().st_size > MAX_FILE_BYTES:
-        raise ValueError('choose a regular file of at most 1 GiB')
+        raise ValueError('выберите обычный файл размером до 1 ГиБ')
     conn = None
     transfer_id = str(uuid.uuid4()).upper()
     started = time.perf_counter()
@@ -117,7 +118,7 @@ def send_file(path, peer, port, address, ifindex, sid, context, name=NAME, model
     try:
         from streaming import prepare
         with tempfile.TemporaryFile() as body:
-            print('Preparing file on disk...', flush=True)
+            print('Подготовка файла на диске…', flush=True)
             size, digest = prepare(path, body)
             encoded_size = body.seek(0, 2)
             body.seek(0)
@@ -133,13 +134,13 @@ def send_file(path, peer, port, address, ifindex, sid, context, name=NAME, model
                     discover = post(conn, '/Discover', plistlib.dumps({'DeviceSupportFlags': 111611}, fmt=plistlib.FMT_BINARY))
                     info = plistlib.loads(discover)
                     if not isinstance(info, dict):
-                        raise ValueError('peer discovery reply is not a dictionary')
-                    print(f"Peer discovery name: {clean(info.get('ReceiverComputerName', '(not disclosed)'))}", flush=True)
+                        raise ValueError('ответ обнаружения устройства не является словарём')
+                    print(f"Имя найденного устройства: {clean(info.get('ReceiverComputerName', '(не раскрыто)'))}", flush=True)
                     break
                 except (ConnectionError, TimeoutError, http.client.RemoteDisconnected):
                     if time.monotonic() >= deadline:
                         raise
-                    print('Waiting for the phone to reopen AirDrop. Keep it unlocked with Everyone enabled...', flush=True)
+                    print('Ожидание повторного открытия AirDrop на телефоне. Оставьте его разблокированным с режимом «Для всех»…', flush=True)
                     time.sleep(min(1, max(0, deadline - time.monotonic())))
                 finally:
                     conn.close()  # Retry only discovery, never an approval request or upload.
@@ -147,7 +148,7 @@ def send_file(path, peer, port, address, ifindex, sid, context, name=NAME, model
             conn = Connection(peer, port, address, ifindex, context, trace=trace)
             phase = 'approval'
             trace(phase)
-            print('Requesting approval on the phone...', flush=True)
+            print('Запрос подтверждения на телефоне…', flush=True)
             post(conn, '/Ask', plistlib.dumps(ask, fmt=plistlib.FMT_BINARY))
             encoded_size = body.seek(0, 2)
             body.seek(0)
@@ -164,7 +165,7 @@ def send_file(path, peer, port, address, ifindex, sid, context, name=NAME, model
             post(conn, '/Upload', Upload(), {'Content-Type': 'application/x-dvzip', 'TotalBytes': str(size),
                                         'TransferID': transfer_id}, chunked=True)
             trace('accepted', source_bytes=size, archive_bytes=encoded_size, sha256=digest)
-            print(f'Peer accepted upload: {size} bytes, SHA-256 {digest}', flush=True)
+            print(f'Устройство приняло файл: {size} байт, SHA-256 {digest}', flush=True)
             return digest
     except Exception as error:
         trace('failed', operation=phase, error_type=type(error).__name__, errno=getattr(error, 'errno', None), winerror=getattr(error, 'winerror', None))
@@ -175,7 +176,7 @@ def send_file(path, peer, port, address, ifindex, sid, context, name=NAME, model
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser()
+    parser = ArgumentParser()
     parser.add_argument('file')
     parser.add_argument('--peer', required=True)
     parser.add_argument('--port', type=int, default=8770)
@@ -186,7 +187,7 @@ if __name__ == '__main__':
     parser.add_argument('--model', type=model_name, default=MODEL)
     args = parser.parse_args()
     if not ipaddress.IPv6Address(args.peer).is_link_local or not ipaddress.IPv6Address(args.address).is_link_local:
-        parser.error('use link-local AWDL peer and source addresses')
+        parser.error('используйте локальные адреса канала AWDL для устройства и источника')
     try:
         context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
         context.check_hostname = False

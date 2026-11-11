@@ -1,16 +1,16 @@
-# Status and limitations
+# Состояние и ограничения
 
-Recorded October 18, 2026; speed notes updated October 21, 2026. This is a developer preview.
+Ниже сохранены результаты автора исходного PulseIt от 18 октября 2026 года с обновлением измерений 21 октября. Они относятся к исходному проекту. Русская адаптация Пульсар требует собственной проверки Windows и оборудования.
 
-- Hardware qualification is limited to Archer T3U `2357:012d` and iPhone 14 Pro Max. Other hardware and OS combinations are unverified.
-- Earlier builds completed bidirectional transfers, including a 135.6 MB outgoing video. The 0.2.7 startup fix passed ten adapter start/stop cycles and stopping during discovery. Current-build iPhone-to-PC transfers of an 80 MB file completed repeatedly; current-build PC-to-iPhone transfers and live BLE qualification remain pending.
-- Discovery can expire with the phone's Everyone window or blocked Windows BLE advertising. Retained UI rows require endpoint verification before sending.
-- Bluetooth recovery may interrupt accessories. Intel Bluetooth controller timeouts have occurred during investigation; attribution to PulseIt is unestablished. Controller failure may require a Windows restart. PnP/service status alone does not prove working Bluetooth.
-- Fixed channel 149 is the baseline. Receiving uses 80 MHz and our unicast frames go out at 54 Mbit/s; **Compatible sending** falls back to 12 Mbit/s. An 80 MB iPhone-to-PC transfer took about 14–20 seconds (4–6 MB/s) when the phone gave AirDrop most of its time slots, and much longer when the phone stayed on a Wi-Fi network on another channel. These are samples, not a speed guarantee. Occasional USB send stalls of 100–230 ms remain unexplained. Prior PC-to-iPhone samples were about 0.33 MB/s and have not been re-measured. Channel matching showed no verified gain.
-- The application enforces a 1 GiB transfer limit. Large transfers may pause. Repeated cancellation, unplug/replug and sustained use need further physical qualification.
-- Contacts Only and Apple-account identity verification are unsupported. TLS does not authenticate a peer as an Apple contact. Confirm the intended device yourself.
-- Administrator access, WinUSB binding, TAP and scoped firewall rules are required. WinUSB takes the USB adapter away from ordinary Wi-Fi. Clean-PC installation and driver restoration remain release gates.
-- Cold radio HELLO allows 45 seconds after an observed 22-second initialization; ordinary requests still use a 3-second deadline.
-- Exports and captures require privacy review. Hard-crash staging scavenging is not enabled; age alone does not prove a temporary folder is inactive.
+- Аппаратная проверка источника ограничена Archer T3U `2357:012d` и iPhone 14 Pro Max. Другие ревизии, устройства и версии ОС не подтверждены.
+- Ранние сборки передавали файлы в обе стороны, включая видео 135,6 МБ на iPhone. Исправление запуска 0.2.7 выдержало десять циклов включения и выключения адаптера и остановку во время поиска. Приём файла 80 МБ с iPhone повторялся успешно. Отправка текущей версии и совместная работа BLE требуют проверки.
+- Окно режима «Для всех» на телефоне ограничено по времени, а Windows может блокировать BLE. Перед отправкой сохранённая строка устройства заново проверяет адрес.
+- Восстановление Bluetooth может прерывать работу аксессуаров. В ходе исследования наблюдались тайм-ауты контроллера Intel; связь с приложением не установлена. Может потребоваться перезапуск Windows. Состояние PnP или службы не доказывает рабочую радиосвязь.
+- Базовый канал — 149, приём — 80 МГц, индивидуальные подтверждения — 54 Мбит/с. Режим совместимости использует 12 Мбит/с. По измерениям источника 80 МБ принимались за 14–20 с, около 4–6 МБ/с; на другом канале Wi-Fi телефона скорость снижалась. Это примеры, не гарантия. Необъяснённые остановки отправки USB на 100–230 мс сохраняются. Старые измерения отправки на iPhone — около 0,33 МБ/с; новых нет. Польза подбора канала не подтверждена.
+- Ограничение приложения — 1 ГиБ. Большие передачи могут приостанавливаться. Повторная отмена, отключение и подключение адаптера, длительная работа требуют испытаний.
+- «Только для контактов» и проверка учётной записи Apple не поддерживаются. TLS не подтверждает личность контакта Apple; проверяйте выбранное устройство самостоятельно.
+- Нужны права администратора, WinUSB, TAP и ограниченные правила брандмауэра. WinUSB отключает обычный Wi-Fi на выделенном USB-адаптере. Установка на чистом ПК и восстановление драйвера ещё не квалифицированы.
+- Первое сообщение HELLO после холодного запуска допускает 45 с: наблюдалась инициализация 22 с. Для обычных запросов сохранён предел 3 с.
+- Автоматическая очистка временных папок после аварии не включена: возраст папки не доказывает, что другой сеанс её не использует. Экспорт диагностики нужно проверять на личные данные.
 
-Acceptance requires traced current-build large transfers both ways, matching files and user opening/playback, cancellation/recovery checks, BLE coexistence and clean-PC setup/restoration. Fixtures do not clear these gates.
+Для аппаратной приёмки нужны большие передачи текущей версии в обе стороны, совпадение файлов и открытие на устройствах, проверка отмены и восстановления, совместной работы BLE и установки на чистый ПК. Автоматические тесты с искусственными данными этого не заменяют.
